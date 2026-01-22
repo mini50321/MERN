@@ -1,0 +1,6 @@
+
+DROP INDEX idx_product_brand_engineers_territory_id;
+DROP INDEX idx_product_brand_engineers_brand_id;
+DROP INDEX idx_product_brand_territories_brand_id;
+DROP TABLE product_brand_engineers;
+DROP TABLE product_brand_territories;

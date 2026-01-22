@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}
+
+@layer base {
+  body {
+    @apply text-sm;
+  }
+  
+  h1 {
+    @apply text-lg font-bold;
+  }
+  
+  h2 {
+    @apply text-base font-semibold;
+  }
+  
+  h3 {
+    @apply text-sm font-semibold;
+  }
+}

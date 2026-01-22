@@ -1,0 +1,4 @@
+
+DROP INDEX idx_exhibition_responses_user_id;
+DROP INDEX idx_exhibition_responses_exhibition_id;
+DROP TABLE exhibition_responses;

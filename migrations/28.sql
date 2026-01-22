@@ -1,0 +1,12 @@
+
+CREATE TABLE banner_ads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  image_url TEXT NOT NULL,
+  target_url TEXT,
+  ad_type TEXT DEFAULT 'image',
+  is_active BOOLEAN DEFAULT 1,
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

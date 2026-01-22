@@ -1,0 +1,1 @@
+ALTER TABLE global_chat_messages DROP COLUMN profession;

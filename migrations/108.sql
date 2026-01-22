@@ -1,0 +1,18 @@
+
+ALTER TABLE jobs ADD COLUMN country TEXT;
+ALTER TABLE jobs ADD COLUMN state TEXT;
+ALTER TABLE jobs ADD COLUMN city TEXT;
+ALTER TABLE jobs ADD COLUMN is_remote BOOLEAN DEFAULT 0;
+ALTER TABLE jobs ADD COLUMN remote_type TEXT;
+ALTER TABLE jobs ADD COLUMN salary_min REAL;
+ALTER TABLE jobs ADD COLUMN salary_max REAL;
+ALTER TABLE jobs ADD COLUMN salary_currency TEXT DEFAULT 'USD';
+ALTER TABLE jobs ADD COLUMN salary_period TEXT DEFAULT 'yearly';
+ALTER TABLE jobs ADD COLUMN education_required TEXT;
+ALTER TABLE jobs ADD COLUMN skills_required TEXT;
+ALTER TABLE jobs ADD COLUMN responsibilities TEXT;
+ALTER TABLE jobs ADD COLUMN benefits TEXT;
+ALTER TABLE jobs ADD COLUMN number_of_openings INTEGER DEFAULT 1;
+ALTER TABLE jobs ADD COLUMN application_url TEXT;
+ALTER TABLE jobs ADD COLUMN company_website TEXT;
+ALTER TABLE jobs ADD COLUMN company_logo_url TEXT;

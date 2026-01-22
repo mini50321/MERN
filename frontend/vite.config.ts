@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { mochaPlugins } from "@getmocha/vite-plugins";
 
-const shouldSkipCloudflare = process.env.SKIP_CLOUDFLARE === "true";
+const shouldSkipCloudflare = process.env.SKIP_CLOUDFLARE === "true" || !process.env.NODE_ENV || process.env.NODE_ENV === "development";
 
 export default defineConfig({
   plugins: [
@@ -21,6 +21,10 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 5000,
+  },
+  esbuild: {
+    target: 'es2020',
+    format: 'esm',
   },
   resolve: {
     alias: {

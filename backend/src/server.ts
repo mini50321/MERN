@@ -12,6 +12,9 @@ import jobRoutes from './routes/jobs.js';
 import newsRoutes from './routes/news.js';
 import supportRoutes from './routes/support.js';
 import analyticsRoutes from './routes/analytics.js';
+import ribbonSettingsRoutes from './routes/ribbonSettings.js';
+import exhibitionRoutes from './routes/exhibitions.js';
+import oauthRoutes from './routes/oauth.js';
 
 dotenv.config();
 
@@ -41,6 +44,9 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/analytics', analyticsRoutes);
+app.use('/api/ribbon-settings', ribbonSettingsRoutes);
+app.use('/api/exhibitions', exhibitionRoutes);
+app.use('/api/oauth', oauthRoutes);
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);

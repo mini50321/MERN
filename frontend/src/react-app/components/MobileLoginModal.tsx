@@ -24,7 +24,7 @@ export default function MobileLoginModal({ isOpen, onClose, onSuccess }: MobileL
     // Validate phone number (Indian format)
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!phoneRegex.test(phoneNumber)) {
-      setError("Please enter a valid 10-digit mobile number");
+      setError("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9");
       return;
     }
 
@@ -34,6 +34,7 @@ export default function MobileLoginModal({ isOpen, onClose, onSuccess }: MobileL
       const response = await fetch("/api/auth/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ phone_number: phoneNumber }),
       });
 
@@ -42,6 +43,11 @@ export default function MobileLoginModal({ isOpen, onClose, onSuccess }: MobileL
       if (response.ok && data.success) {
         setStep("otp");
         startResendTimer();
+        
+        if (data.development_otp) {
+          console.log(`🔐 Development OTP: ${data.development_otp}`);
+          alert(`Development Mode: Your OTP is ${data.development_otp}\n\nCheck the browser console for details.`);
+        }
       } else {
         setError(data.message || "Failed to send OTP. Please try again.");
       }
@@ -68,6 +74,7 @@ export default function MobileLoginModal({ isOpen, onClose, onSuccess }: MobileL
       const response = await fetch("/api/auth/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ phone_number: phoneNumber, otp }),
       });
 
@@ -97,6 +104,7 @@ export default function MobileLoginModal({ isOpen, onClose, onSuccess }: MobileL
       const response = await fetch("/api/auth/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ phone_number: phoneNumber }),
       });
 

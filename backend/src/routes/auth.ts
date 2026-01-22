@@ -21,10 +21,25 @@ router.post('/otp/send', async (req: Request, res: Response) => {
     const otp = await generateOTP();
 
     const apiKey = process.env.FAST2SMS_API_KEY || "";
-    if (!apiKey) {
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    if (!apiKey && !isDevelopment) {
       return res.status(500).json({ 
         success: false, 
         message: "SMS service not configured. Please contact support." 
+      });
+    }
+    
+    if (!apiKey && isDevelopment) {
+      console.log(`\n🔐 DEVELOPMENT MODE - OTP for ${phone_number}: ${otp}\n`);
+      console.log(`⚠️  SMS service not configured. In production, add FAST2SMS_API_KEY to .env\n`);
+      
+      await storeOTP(phone_number, otp);
+      
+      return res.json({ 
+        success: true, 
+        message: `OTP sent (check console): ${otp}`,
+        development_otp: otp
       });
     }
     
@@ -94,11 +109,13 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
       { expiresIn: '60d' }
     );
 
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     res.cookie('mavy_session', token, {
       httpOnly: true,
       path: '/',
-      sameSite: 'none',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: isProduction ? 'none' : 'lax',
+      secure: isProduction,
       maxAge: 60 * 24 * 60 * 60 * 1000
     });
 

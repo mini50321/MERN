@@ -312,8 +312,11 @@ function HealthcareParticleTrail() {
   );
 }
 
+import MobileLoginModal from "@/react-app/components/MobileLoginModal";
+
 export default function Home() {
   const { isPending, redirectToLogin } = useAuth();
+  const [showMobileLogin, setShowMobileLogin] = useState(false);
   const [, setCurrentSlide] = useState(0);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [activeLegalModal, setActiveLegalModal] = useState<LegalModal>(null);
@@ -815,7 +818,7 @@ export default function Home() {
                     />
                   </form>
                   <button
-                    onClick={redirectToLogin}
+                    onClick={() => setShowMobileLogin(true)}
                     className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 hover:scale-105 text-sm flex items-center gap-2"
                   >
                     <Play className="w-4 h-4 fill-white" />
@@ -850,7 +853,7 @@ export default function Home() {
                     <MobileNavLink href="#faq" onClick={() => setMobileMenuOpen(false)}>FAQ</MobileNavLink>
                     <MobileNavLink href="#contact" onClick={() => setMobileMenuOpen(false)}>Contact</MobileNavLink>
                     <button
-                      onClick={redirectToLogin}
+                      onClick={() => setShowMobileLogin(true)}
                       className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm mt-2"
                     >
                       Get Started Free
@@ -1726,6 +1729,15 @@ export default function Home() {
           animation: confetti 3s ease-out forwards;
         }
       `}</style>
+      
+      <MobileLoginModal
+        isOpen={showMobileLogin}
+        onClose={() => setShowMobileLogin(false)}
+        onSuccess={() => {
+          setShowMobileLogin(false);
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

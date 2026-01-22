@@ -18,3 +18,5 @@ export { ReferralTracking } from './ReferralTracking';
 export type { IReferralTracking } from './ReferralTracking';
 export { OTP } from './OTP';
 export type { IOTP } from './OTP';
+export { Exhibition } from './Exhibition';
+export type { IExhibition } from './Exhibition';

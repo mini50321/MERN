@@ -40,6 +40,11 @@ export default function CreateServiceModal({ onClose, onSuccess }: CreateService
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size must be less than 5MB. Please choose a smaller image.");
+      return;
+    }
+
     setUploadingImage(true);
     const formData = new FormData();
     formData.append("image", file);
@@ -55,11 +60,16 @@ export default function CreateServiceModal({ onClose, onSuccess }: CreateService
         const data = await response.json();
         setFormData(prev => ({ ...prev, image_url: data.image_url }));
       } else {
-        alert("Failed to upload image");
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        if (response.status === 413) {
+          alert("Image is too large. Please use an image smaller than 5MB.");
+        } else {
+          alert(errorData.error || "Failed to upload image");
+        }
       }
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Failed to upload image");
+      alert("Failed to upload image. Please check your connection and try again.");
     } finally {
       setUploadingImage(false);
     }

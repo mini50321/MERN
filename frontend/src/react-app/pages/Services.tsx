@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import CreateServiceModal from "@/react-app/components/CreateServiceModal";
 import EditServiceModal from "@/react-app/components/EditServiceModal";
+import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 
 /* =========================
    Types
@@ -67,6 +68,7 @@ export default function Services() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [contactService, setContactService] = useState<Service | null>(null);
   const [deletingServiceId, setDeletingServiceId] = useState<string | number | null>(null);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -113,9 +115,11 @@ export default function Services() {
       });
 
       if (response.ok) {
+        setServiceToDelete(null);
         fetchServices();
       } else {
-        alert("Failed to delete service");
+        const data = await response.json();
+        alert(data.error || "Failed to delete service");
       }
     } catch (error) {
       console.error("Error deleting service:", error);
@@ -243,9 +247,7 @@ export default function Services() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm("Are you sure you want to delete this service?")) {
-                              handleDeleteService(s.id);
-                            }
+                            setServiceToDelete(s);
                           }}
                           disabled={deletingServiceId === s.id}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -320,6 +322,19 @@ export default function Services() {
             setEditingService(null);
             fetchServices();
           }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {serviceToDelete && (
+        <DeleteConfirmModal
+          isOpen={!!serviceToDelete}
+          onClose={() => setServiceToDelete(null)}
+          onConfirm={() => handleDeleteService(serviceToDelete.id)}
+          title="Delete Service"
+          message="Are you sure you want to delete this service?"
+          itemName={serviceToDelete.title}
+          isDeleting={deletingServiceId === serviceToDelete.id}
         />
       )}
 

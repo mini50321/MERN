@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { connectDB } from './config/database.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -19,6 +21,9 @@ import servicesRoutes from './routes/services.js';
 import adminRoutes from './routes/admin.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +57,15 @@ app.use('/api/oauth', oauthRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
+
+// Serve frontend static files
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDistPath));
+
+// Serve index.html for all non-API routes (SPA routing)
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(frontendDistPath, 'index.html'));
+});
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);

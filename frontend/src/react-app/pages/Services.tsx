@@ -12,7 +12,6 @@ import {
   User,
   Edit,
   Trash2,
-  MoreVertical,
 } from "lucide-react";
 import CreateServiceModal from "@/react-app/components/CreateServiceModal";
 import EditServiceModal from "@/react-app/components/EditServiceModal";

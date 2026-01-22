@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { X, Image as ImageIcon } from "lucide-react";
 
 interface EditServiceModalProps {

@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "test:mongodb": "node test-mongodb.js"

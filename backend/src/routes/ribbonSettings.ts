@@ -30,7 +30,7 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-router.put('/admin', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/admin', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {
@@ -39,7 +39,7 @@ router.put('/admin', authMiddleware, async (req: AuthRequest, res: Response) => 
   }
 });
 
-router.post('/admin/reset', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/admin/reset', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     const newVersion = Date.now().toString();
     return res.json({ success: true, version: newVersion });

@@ -24,7 +24,7 @@ router.get('/', async (req: Request, res: Response) => {
         const provider = await User.findOne({ user_id: service.posted_by_user_id });
         if (provider) {
           serviceObj.provider_name = provider.full_name || provider.business_name || 'Unknown';
-          serviceObj.provider_picture = provider.profile_picture_url || null;
+          serviceObj.provider_picture = provider.profile_picture_url ?? undefined;
         }
       }
 
@@ -81,7 +81,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       const provider = await User.findOne({ user_id: service.posted_by_user_id });
       if (provider) {
         serviceObj.provider_name = provider.full_name || provider.business_name || 'Unknown';
-        serviceObj.provider_picture = provider.profile_picture_url || null;
+        serviceObj.provider_picture = provider.profile_picture_url ?? undefined;
       }
     }
 

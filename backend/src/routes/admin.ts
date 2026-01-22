@@ -66,7 +66,7 @@ router.post('/make-admin', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/notification-counts', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/notification-counts', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({
       posts: 0,

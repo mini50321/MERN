@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
 import { connectDB } from './config/database.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -59,13 +60,26 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
 
 // Serve frontend static files
-const frontendDistPath = path.join(__dirname, '../../frontend/dist');
-app.use(express.static(frontendDistPath));
+// __dirname in compiled code is backend/dist/, so go up to project root
+const projectRoot = path.resolve(__dirname, '../..');
+const frontendDistPath = path.join(projectRoot, 'frontend/dist');
 
-// Serve index.html for all non-API routes (SPA routing)
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(frontendDistPath, 'index.html'));
-});
+console.log('Frontend dist path:', frontendDistPath);
+
+// Check if frontend dist exists
+if (existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  
+  // Serve index.html for all non-API routes (SPA routing)
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+} else {
+  console.warn(`Frontend dist folder not found at: ${frontendDistPath}`);
+  app.get('*', (_req, res) => {
+    res.status(404).json({ error: 'Frontend not built. Please run: cd frontend && npm run build' });
+  });
+}
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);

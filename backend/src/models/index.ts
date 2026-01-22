@@ -20,3 +20,5 @@ export { OTP } from './OTP';
 export type { IOTP } from './OTP';
 export { Exhibition } from './Exhibition';
 export type { IExhibition } from './Exhibition';
+export { Service } from './Service';
+export type { IService } from './Service';

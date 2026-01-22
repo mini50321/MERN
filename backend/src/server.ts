@@ -15,6 +15,7 @@ import analyticsRoutes from './routes/analytics.js';
 import ribbonSettingsRoutes from './routes/ribbonSettings.js';
 import exhibitionRoutes from './routes/exhibitions.js';
 import oauthRoutes from './routes/oauth.js';
+import servicesRoutes from './routes/services.js';
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/api/admin/analytics', analyticsRoutes);
 app.use('/api/ribbon-settings', ribbonSettingsRoutes);
 app.use('/api/exhibitions', exhibitionRoutes);
 app.use('/api/oauth', oauthRoutes);
+app.use('/api/services', servicesRoutes);
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);

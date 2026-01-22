@@ -10,14 +10,18 @@ import {
   Mail,
   Phone,
   User,
+  Edit,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import CreateServiceModal from "@/react-app/components/CreateServiceModal";
+import EditServiceModal from "@/react-app/components/EditServiceModal";
 
 /* =========================
    Types
 ========================= */
 interface Service {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
   service_type: string;
@@ -29,6 +33,7 @@ interface Service {
   contact_email: string | null;
   contact_phone: string | null;
   image_url: string | null;
+  posted_by_user_id?: string;
 }
 
 /* =========================
@@ -52,13 +57,29 @@ const SERVICE_TYPES = [
 ========================= */
 export default function Services() {
   const { user } = useAuth();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
   const [contactService, setContactService] = useState<Service | null>(null);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | number | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetch("/api/users/me", { credentials: "include" })
+        .then(res => res.json())
+        .then(data => {
+          if (data.profile?.user_id) {
+            setCurrentUserId(data.profile.user_id);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   /* =========================
      Data Fetch
@@ -82,6 +103,27 @@ export default function Services() {
   useEffect(() => {
     fetchServices();
   }, [type]);
+
+  const handleDeleteService = async (serviceId: string | number) => {
+    try {
+      setDeletingServiceId(serviceId);
+      const response = await fetch(`/api/services/${serviceId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        fetchServices();
+      } else {
+        alert("Failed to delete service");
+      }
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      alert("An error occurred while deleting the service");
+    } finally {
+      setDeletingServiceId(null);
+    }
+  };
 
   /* =========================
      Derived State
@@ -168,21 +210,55 @@ export default function Services() {
                 )}
 
                 <div className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    {s.provider_picture ? (
-                      <img
-                        src={s.provider_picture}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      {s.provider_picture ? (
+                        <img
+                          src={s.provider_picture}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                          <User className="w-5 h-5 text-white" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <p className="font-semibold">{s.provider_name}</p>
+                        <p className="text-xs text-gray-500">{s.service_type}</p>
+                      </div>
+                    </div>
+                    
+                    {currentUserId && currentUserId === s.posted_by_user_id && (
+                      <div className="flex items-center gap-2 ml-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingService(s);
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit service"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Are you sure you want to delete this service?")) {
+                              handleDeleteService(s.id);
+                            }
+                          }}
+                          disabled={deletingServiceId === s.id}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete service"
+                        >
+                          {deletingServiceId === s.id ? (
+                            <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
                       </div>
                     )}
-                    <div>
-                      <p className="font-semibold">{s.provider_name}</p>
-                      <p className="text-xs text-gray-500">{s.service_type}</p>
-                    </div>
                   </div>
 
                   <h3 className="font-bold text-lg mb-2">{s.title}</h3>
@@ -230,6 +306,18 @@ export default function Services() {
           onClose={() => setShowCreate(false)}
           onSuccess={() => {
             setShowCreate(false);
+            fetchServices();
+          }}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editingService && (
+        <EditServiceModal
+          service={editingService}
+          onClose={() => setEditingService(null)}
+          onSuccess={() => {
+            setEditingService(null);
             fetchServices();
           }}
         />

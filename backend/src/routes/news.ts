@@ -97,4 +97,16 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
+router.post('/upload-image', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json({ 
+      image_url: 'https://via.placeholder.com/800x600?text=Service+Image',
+      message: 'Image upload placeholder - implement file storage in production'
+    });
+  } catch (error) {
+    console.error('Upload image error:', error);
+    return res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
 export default router;

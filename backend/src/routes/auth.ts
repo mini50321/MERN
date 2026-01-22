@@ -148,7 +148,7 @@ router.post('/otp/verify-phone', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/logout', (req: Request, res: Response) => {
+router.get('/logout', (_req: Request, res: Response) => {
   res.clearCookie('mavy_session');
   return res.json({ success: true });
 });

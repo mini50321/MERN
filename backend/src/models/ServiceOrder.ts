@@ -34,6 +34,7 @@ export interface IServiceOrder extends Document {
   billing_frequency?: string;
   monthly_visits_count?: number;
   patient_condition?: string;
+  partner_rating?: number;
   responded_at?: Date;
   completed_at?: Date;
   created_at: Date;
@@ -103,6 +104,7 @@ const ServiceOrderSchema = new Schema<IServiceOrder>({
   billing_frequency: String,
   monthly_visits_count: Number,
   patient_condition: String,
+  partner_rating: Number,
   responded_at: Date,
   completed_at: Date,
   created_at: {

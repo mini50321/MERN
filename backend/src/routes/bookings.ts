@@ -1,5 +1,5 @@
 import express, { Response } from 'express';
-import { ServiceOrder } from '../models/index.js';
+import { ServiceOrder, User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -57,7 +57,8 @@ router.post('/submit', authMiddleware, async (req: AuthRequest, res: Response) =
 
     return res.status(201).json({ 
       success: true, 
-      order_id: serviceOrder._id,
+      order_id: serviceOrder._id.toString(),
+      id: serviceOrder._id.toString(),
       quoted_price: serviceOrder.quoted_price,
       status: serviceOrder.status,
       message: "Booking request submitted successfully."
@@ -76,9 +77,71 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const orders = await ServiceOrder.find({ patient_user_id: req.user!.user_id })
       .sort({ created_at: -1 });
     
-    return res.json(orders);
+    const formattedOrders = orders.map(order => ({
+      ...order.toObject(),
+      id: order._id.toString()
+    }));
+    
+    return res.json(formattedOrders);
   } catch (error) {
     console.error('Get bookings error:', error);
+    return res.status(500).json({ error: 'Failed to fetch bookings' });
+  }
+});
+
+router.get('/patient', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const orders = await ServiceOrder.find({ patient_user_id: req.user!.user_id })
+      .sort({ created_at: -1 });
+    
+    const formattedOrders = await Promise.all(orders.map(async (order) => {
+      const orderObj = order.toObject();
+      let partnerInfo = {};
+      
+      if (order.status === 'accepted' && order.assigned_engineer_id) {
+        const partner = await User.findOne({ user_id: order.assigned_engineer_id });
+        if (partner) {
+          const completedOrders = await ServiceOrder.countDocuments({
+            assigned_engineer_id: order.assigned_engineer_id,
+            status: 'completed'
+          });
+          
+          const ratings = await ServiceOrder.find({
+            assigned_engineer_id: order.assigned_engineer_id,
+            status: 'completed',
+            partner_rating: { $exists: true, $ne: null }
+          });
+          
+          const avgRating = ratings.length > 0
+            ? ratings.reduce((sum, r) => sum + (r.partner_rating || 0), 0) / ratings.length
+            : null;
+          
+          partnerInfo = {
+            partner_name: partner.full_name || partner.business_name,
+            partner_phone: partner.phone,
+            partner_email: partner.patient_email,
+            partner_latitude: partner.patient_latitude,
+            partner_longitude: partner.patient_longitude,
+            partner_location: partner.location,
+            partner_city: partner.city,
+            partner_state: partner.state,
+            partner_avg_rating: avgRating ? Math.round(avgRating * 10) / 10 : null,
+            partner_total_ratings: ratings.length,
+            partner_completed_orders: completedOrders
+          };
+        }
+      }
+      
+      return {
+        ...orderObj,
+        id: order._id.toString(),
+        ...partnerInfo
+      };
+    }));
+    
+    return res.json(formattedOrders);
+  } catch (error) {
+    console.error('Get patient bookings error:', error);
     return res.status(500).json({ error: 'Failed to fetch bookings' });
   }
 });

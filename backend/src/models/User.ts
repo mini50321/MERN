@@ -11,6 +11,7 @@ export interface IUser extends Document {
   location?: string;
   state?: string;
   country?: string;
+  city?: string;
   profile_picture_url?: string;
   resume_url?: string;
   experience?: string;
@@ -28,6 +29,10 @@ export interface IUser extends Document {
   referral_code: string;
   account_type?: string;
   profession?: string;
+  business_name?: string;
+  patient_email?: string;
+  patient_latitude?: number;
+  patient_longitude?: number;
   onboarding_completed: boolean;
   created_at: Date;
   updated_at: Date;
@@ -49,6 +54,7 @@ const UserSchema = new Schema<IUser>({
   location: String,
   state: String,
   country: String,
+  city: String,
   profile_picture_url: String,
   resume_url: String,
   experience: String,
@@ -80,6 +86,10 @@ const UserSchema = new Schema<IUser>({
   },
   account_type: String,
   profession: String,
+  business_name: String,
+  patient_email: String,
+  patient_latitude: Number,
+  patient_longitude: Number,
   onboarding_completed: {
     type: Boolean,
     default: false

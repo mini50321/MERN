@@ -111,6 +111,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const totalFundraisers = 0;
     const totalNews = await NewsUpdate.countDocuments();
 
+    const kycTotalSubmissions = 0;
+    const kycPendingReview = 0;
+    const kycApproved = 0;
+    const kycRejected = 0;
+    const kycPendingThisWeek = 0;
+
     return res.json({
       userStats: {
         totalPartners,
@@ -154,13 +160,21 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
         avgResponseTime: 0,
         ticketsThisWeek
       },
+      kycStats: {
+        totalSubmissions: kycTotalSubmissions,
+        pendingReview: kycPendingReview,
+        approved: kycApproved,
+        rejected: kycRejected,
+        pendingThisWeek: kycPendingThisWeek
+      },
       engagementMetrics: {
         totalCourses,
         totalExhibitions,
         totalJobs,
         totalFundraisers,
         totalNews
-      }
+      },
+      activeUsers: activePartners + activePatients
     });
   } catch (error) {
     console.error('Get analytics error:', error);

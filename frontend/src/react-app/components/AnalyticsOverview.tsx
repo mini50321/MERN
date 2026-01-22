@@ -123,7 +123,7 @@ export default function AnalyticsOverview() {
           <h2 className="text-lg font-bold text-gray-900">Platform Analytics</h2>
           <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
             <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-            {data.activeUsers} Active Now
+            {data.activeUsers || 0} Active Now
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -155,15 +155,15 @@ export default function AnalyticsOverview() {
           <div className="grid grid-cols-2 gap-4 mt-6">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Partners</p>
-              <p className="text-3xl font-bold text-blue-600">{data.userStats.totalPartners}</p>
+              <p className="text-3xl font-bold text-blue-600">{data.userStats?.totalPartners || 0}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 mb-1">Active</p>
-              <p className="text-3xl font-bold text-green-600">{data.userStats.activePartners}</p>
+              <p className="text-3xl font-bold text-green-600">{data.userStats?.activePartners || 0}</p>
             </div>
             <div className="col-span-2">
               <p className="text-sm text-gray-600 mb-1">New this week</p>
-              <p className="text-2xl font-bold text-gray-900">{data.userStats.partnersThisWeek}</p>
+              <p className="text-2xl font-bold text-gray-900">{data.userStats?.partnersThisWeek || 0}</p>
             </div>
           </div>
         </div>
@@ -182,15 +182,15 @@ export default function AnalyticsOverview() {
           <div className="grid grid-cols-2 gap-4 mt-6">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Patients</p>
-              <p className="text-3xl font-bold text-green-600">{data.userStats.totalPatients}</p>
+              <p className="text-3xl font-bold text-green-600">{data.userStats?.totalPatients || 0}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600 mb-1">Active</p>
-              <p className="text-3xl font-bold text-blue-600">{data.userStats.activePatients}</p>
+              <p className="text-3xl font-bold text-blue-600">{data.userStats?.activePatients || 0}</p>
             </div>
             <div className="col-span-2">
               <p className="text-sm text-gray-600 mb-1">New this week</p>
-              <p className="text-2xl font-bold text-gray-900">{data.userStats.patientsThisWeek}</p>
+              <p className="text-2xl font-bold text-gray-900">{data.userStats?.patientsThisWeek || 0}</p>
             </div>
           </div>
         </div>
@@ -206,31 +206,31 @@ export default function AnalyticsOverview() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           <StatCard
             title="Total Bookings"
-            value={data.bookingStats.totalBookings}
+            value={data.bookingStats?.totalBookings || 0}
             color="bg-blue-100 text-blue-600"
             icon={<Calendar className="w-5 h-5" />}
           />
           <StatCard
             title="Pending"
-            value={data.bookingStats.pendingBookings}
+            value={data.bookingStats?.pendingBookings || 0}
             color="bg-yellow-100 text-yellow-600"
             icon={<Clock className="w-5 h-5" />}
           />
           <StatCard
             title="Accepted"
-            value={data.bookingStats.acceptedBookings}
+            value={data.bookingStats?.acceptedBookings || 0}
             color="bg-green-100 text-green-600"
             icon={<CheckCircle className="w-5 h-5" />}
           />
           <StatCard
             title="Completed"
-            value={data.bookingStats.completedBookings}
+            value={data.bookingStats?.completedBookings || 0}
             color="bg-purple-100 text-purple-600"
             icon={<CheckCircle className="w-5 h-5" />}
           />
           <StatCard
             title="Cancelled"
-            value={data.bookingStats.cancelledBookings}
+            value={data.bookingStats?.cancelledBookings || 0}
             color="bg-red-100 text-red-600"
             icon={<XCircle className="w-5 h-5" />}
           />
@@ -288,23 +288,23 @@ export default function AnalyticsOverview() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <span className="text-sm font-medium text-gray-700">Total Submissions</span>
-              <span className="text-lg font-bold text-gray-900">{data.kycStats.totalSubmissions}</span>
+              <span className="text-lg font-bold text-gray-900">{data.kycStats?.totalSubmissions || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
               <span className="text-sm font-medium text-yellow-700">Pending Review</span>
-              <span className="text-lg font-bold text-yellow-600">{data.kycStats.pendingReview}</span>
+              <span className="text-lg font-bold text-yellow-600">{data.kycStats?.pendingReview || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
               <span className="text-sm font-medium text-green-700">Approved</span>
-              <span className="text-lg font-bold text-green-600">{data.kycStats.approved}</span>
+              <span className="text-lg font-bold text-green-600">{data.kycStats?.approved || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
               <span className="text-sm font-medium text-red-700">Rejected</span>
-              <span className="text-lg font-bold text-red-600">{data.kycStats.rejected}</span>
+              <span className="text-lg font-bold text-red-600">{data.kycStats?.rejected || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
               <span className="text-sm font-medium text-blue-700">New This Week</span>
-              <span className="text-lg font-bold text-blue-600">{data.kycStats.pendingThisWeek}</span>
+              <span className="text-lg font-bold text-blue-600">{data.kycStats?.pendingThisWeek || 0}</span>
             </div>
           </div>
         </div>
@@ -318,23 +318,23 @@ export default function AnalyticsOverview() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <span className="text-sm font-medium text-gray-700">Total Tickets</span>
-              <span className="text-lg font-bold text-gray-900">{data.supportStats.totalTickets}</span>
+              <span className="text-lg font-bold text-gray-900">{data.supportStats?.totalTickets || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
               <span className="text-sm font-medium text-yellow-700">Open</span>
-              <span className="text-lg font-bold text-yellow-600">{data.supportStats.openTickets}</span>
+              <span className="text-lg font-bold text-yellow-600">{data.supportStats?.openTickets || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
               <span className="text-sm font-medium text-blue-700">In Progress</span>
-              <span className="text-lg font-bold text-blue-600">{data.supportStats.inProgressTickets}</span>
+              <span className="text-lg font-bold text-blue-600">{data.supportStats?.inProgressTickets || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
               <span className="text-sm font-medium text-green-700">Closed</span>
-              <span className="text-lg font-bold text-green-600">{data.supportStats.closedTickets}</span>
+              <span className="text-lg font-bold text-green-600">{data.supportStats?.closedTickets || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
               <span className="text-sm font-medium text-purple-700">Avg Response Time</span>
-              <span className="text-lg font-bold text-purple-600">{data.supportStats.avgResponseTime}h</span>
+              <span className="text-lg font-bold text-purple-600">{data.supportStats?.avgResponseTime || 0}h</span>
             </div>
           </div>
         </div>

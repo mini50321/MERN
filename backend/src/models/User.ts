@@ -34,6 +34,8 @@ export interface IUser extends Document {
   patient_latitude?: number;
   patient_longitude?: number;
   onboarding_completed: boolean;
+  is_admin?: boolean;
+  role?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -94,6 +96,11 @@ const UserSchema = new Schema<IUser>({
     type: Boolean,
     default: false
   },
+  is_admin: {
+    type: Boolean,
+    default: false
+  },
+  role: String,
   created_at: {
     type: Date,
     default: Date.now

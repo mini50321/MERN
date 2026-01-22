@@ -1,8 +1,23 @@
 import express, { type Request, type Response } from 'express';
+import multer from 'multer';
 import { NewsUpdate } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -97,11 +112,19 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.post('/upload-image', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/upload-image', authMiddleware, upload.single('image'), async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const file = req.file;
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
     return res.json({ 
-      image_url: 'https://via.placeholder.com/800x600?text=Service+Image',
-      message: 'Image upload placeholder - implement file storage in production'
+      success: true,
+      image_url: base64Image,
+      message: 'Image uploaded successfully (stored as base64 data URL)'
     });
   } catch (error) {
     console.error('Upload image error:', error);

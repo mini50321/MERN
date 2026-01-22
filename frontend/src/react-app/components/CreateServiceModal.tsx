@@ -47,6 +47,7 @@ export default function CreateServiceModal({ onClose, onSuccess }: CreateService
     try {
       const response = await fetch("/api/news/upload-image", {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
 

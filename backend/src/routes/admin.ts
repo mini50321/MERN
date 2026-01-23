@@ -16,10 +16,29 @@ router.get('/check-admin', authMiddleware, async (req: AuthRequest, res: Respons
                     user.role === 'admin' ||
                     user.account_type === 'admin';
 
+    const defaultPermissions: Record<string, string> = isAdmin ? {
+      posts: 'edit',
+      exhibitions: 'edit',
+      jobs: 'edit',
+      learning: 'edit',
+      services: 'edit',
+      manuals: 'edit',
+      users: 'edit',
+      patients: 'edit',
+      bookings: 'edit',
+      support: 'edit',
+      kyc: 'edit',
+      fundraising: 'edit',
+      reports: 'edit',
+      advertising: 'edit',
+      subscriptions: 'edit',
+      admins: 'view'
+    } : {};
+
     return res.json({ 
       is_admin: isAdmin,
       role: user.role || (isAdmin ? 'admin' : null),
-      permissions: {}
+      permissions: defaultPermissions
     });
   } catch (error) {
     console.error('Check admin error:', error);

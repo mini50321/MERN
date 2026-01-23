@@ -324,7 +324,7 @@ router.post('/content/fetch', authMiddleware, async (_req: AuthRequest, res: Res
   }
 });
 
-router.put('/content/:id/approve', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/content/:id/approve', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true, message: 'Content approved' });
   } catch (error) {
@@ -333,7 +333,7 @@ router.put('/content/:id/approve', authMiddleware, async (req: AuthRequest, res:
   }
 });
 
-router.put('/content/:id/reject', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/content/:id/reject', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true, message: 'Content rejected' });
   } catch (error) {

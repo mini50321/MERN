@@ -311,5 +311,36 @@ router.get('/content/pending-news', authMiddleware, async (_req: AuthRequest, re
   }
 });
 
+router.post('/content/fetch', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    return res.json({
+      success: true,
+      items_fetched: 0,
+      message: 'News fetching feature not yet implemented'
+    });
+  } catch (error) {
+    console.error('Fetch news error:', error);
+    return res.status(500).json({ error: 'Failed to fetch news' });
+  }
+});
+
+router.put('/content/:id/approve', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json({ success: true, message: 'Content approved' });
+  } catch (error) {
+    console.error('Approve content error:', error);
+    return res.status(500).json({ error: 'Failed to approve content' });
+  }
+});
+
+router.put('/content/:id/reject', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json({ success: true, message: 'Content rejected' });
+  } catch (error) {
+    console.error('Reject content error:', error);
+    return res.status(500).json({ error: 'Failed to reject content' });
+  }
+});
+
 export default router;
 

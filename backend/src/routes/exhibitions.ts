@@ -258,7 +258,7 @@ router.post('/:id/report', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
-router.get('/:id/comments', async (req: Request, res: Response) => {
+router.get('/:id/comments', async (_req: Request, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {
@@ -269,7 +269,6 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
 
 router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { comment } = req.body;
     const exhibition = await Exhibition.findById(req.params.id);
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
@@ -281,7 +280,7 @@ router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Respon
   }
 });
 
-router.post('/comments/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/comments/:id/like', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true, message: 'Comment liked' });
   } catch (error) {
@@ -290,7 +289,7 @@ router.post('/comments/:id/like', authMiddleware, async (req: AuthRequest, res: 
   }
 });
 
-router.get('/comments/:id/replies', async (req: Request, res: Response) => {
+router.get('/comments/:id/replies', async (_req: Request, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {
@@ -301,7 +300,6 @@ router.get('/comments/:id/replies', async (req: Request, res: Response) => {
 
 router.post('/comments/:id/reply', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { reply } = req.body;
     return res.json({ success: true, message: 'Reply posted' });
   } catch (error) {
     console.error('Reply comment error:', error);

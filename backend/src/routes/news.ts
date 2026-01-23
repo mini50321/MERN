@@ -162,7 +162,7 @@ router.post('/:id/save', authMiddleware, async (req: AuthRequest, res: Response)
   }
 });
 
-router.get('/saved', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {

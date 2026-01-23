@@ -85,6 +85,7 @@ export default function CreateFundraiserModal({ onClose, onSuccess }: CreateFund
       const response = await fetch("/api/fundraisers/upload-image", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -114,6 +115,7 @@ export default function CreateFundraiserModal({ onClose, onSuccess }: CreateFund
       const response = await fetch("/api/fundraisers/upload-document", {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (response.ok) {
@@ -161,6 +163,7 @@ export default function CreateFundraiserModal({ onClose, onSuccess }: CreateFund
           goal_amount: parseFloat(formData.goal_amount),
           documents
         }),
+        credentials: "include",
       });
 
       if (response.ok) {

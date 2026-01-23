@@ -27,6 +27,7 @@ import adsRoutes from './routes/ads.js';
 import manualRequestsRoutes from './routes/manualRequests.js';
 import coursesRoutes from './routes/courses.js';
 import lessonsRoutes from './routes/lessons.js';
+import fundraisersRoutes from './routes/fundraisers.js';
 import adminRoutes from './routes/admin.js';
 
 dotenv.config();
@@ -73,6 +74,7 @@ app.use('/api/ads', adsRoutes);
 app.use('/api/manual-requests', manualRequestsRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/lessons', lessonsRoutes);
+app.use('/api/fundraisers', fundraisersRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
 

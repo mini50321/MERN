@@ -53,6 +53,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/patient/bookings', bookingRoutes);
 app.use('/api/business/products', productRoutes);
 app.use('/api/service-manuals', serviceManualRoutes);
+app.use('/api/manuals', serviceManualRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/support', supportRoutes);

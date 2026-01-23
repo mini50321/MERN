@@ -25,6 +25,8 @@ import connectRoutes from './routes/connect.js';
 import gamificationRoutes from './routes/gamification.js';
 import adsRoutes from './routes/ads.js';
 import manualRequestsRoutes from './routes/manualRequests.js';
+import coursesRoutes from './routes/courses.js';
+import lessonsRoutes from './routes/lessons.js';
 import adminRoutes from './routes/admin.js';
 
 dotenv.config();
@@ -69,6 +71,8 @@ app.use('/api/connect', connectRoutes);
 app.use('/api', gamificationRoutes);
 app.use('/api/ads', adsRoutes);
 app.use('/api/manual-requests', manualRequestsRoutes);
+app.use('/api/courses', coursesRoutes);
+app.use('/api/lessons', lessonsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
 

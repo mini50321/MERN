@@ -132,4 +132,43 @@ router.post('/upload-image', authMiddleware, upload.single('image'), async (req:
   }
 });
 
+router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const news = await NewsUpdate.findById(req.params.id);
+    
+    if (!news) {
+      return res.status(404).json({ error: 'News not found' });
+    }
+
+    return res.json({ success: true, liked: true });
+  } catch (error) {
+    console.error('Like news error:', error);
+    return res.status(500).json({ error: 'Failed to like news' });
+  }
+});
+
+router.post('/:id/save', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const news = await NewsUpdate.findById(req.params.id);
+    
+    if (!news) {
+      return res.status(404).json({ error: 'News not found' });
+    }
+
+    return res.json({ success: true, saved: true });
+  } catch (error) {
+    console.error('Save news error:', error);
+    return res.status(500).json({ error: 'Failed to save news' });
+  }
+});
+
+router.get('/saved', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error) {
+    console.error('Get saved news error:', error);
+    return res.status(500).json({ error: 'Failed to fetch saved news' });
+  }
+});
+
 export default router;

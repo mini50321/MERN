@@ -63,7 +63,6 @@ router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
-// Decline a service order
 router.post('/:id/decline', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const order = await ServiceOrder.findById(req.params.id);
@@ -72,14 +71,11 @@ router.post('/:id/decline', authMiddleware, async (req: AuthRequest, res: Respon
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Only allow declining if order is pending or assigned to this partner
     if (order.status === 'pending' || order.assigned_engineer_id === req.user!.user_id) {
       if (order.status === 'accepted') {
-        // Release the order back to pending
         order.status = 'pending';
         order.assigned_engineer_id = undefined;
       } else {
-        // Mark as declined
         order.status = 'declined';
       }
       await order.save();
@@ -92,7 +88,6 @@ router.post('/:id/decline', authMiddleware, async (req: AuthRequest, res: Respon
   }
 });
 
-// Mark order as completed
 router.post('/:id/complete', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const order = await ServiceOrder.findOne({
@@ -119,7 +114,6 @@ router.post('/:id/complete', authMiddleware, async (req: AuthRequest, res: Respo
   }
 });
 
-// Rate the user (patient)
 router.post('/:id/rate-user', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { rating, review } = req.body;
@@ -137,13 +131,8 @@ router.post('/:id/rate-user', authMiddleware, async (req: AuthRequest, res: Resp
       return res.status(404).json({ error: 'Order not found or not assigned to you' });
     }
 
-    // Update order with rating (using $set for fields that may not exist in schema)
-    await ServiceOrder.findByIdAndUpdate(req.params.id, {
-      $set: {
-        user_rating: rating,
-        user_review: review || null
-      }
-    });
+    order.user_rating = rating;
+    order.user_review = review || null;
     await order.save();
 
     return res.json({ success: true });
@@ -153,7 +142,6 @@ router.post('/:id/rate-user', authMiddleware, async (req: AuthRequest, res: Resp
   }
 });
 
-// Release an order (make it available for other partners)
 router.post('/:id/release', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const order = await ServiceOrder.findOne({

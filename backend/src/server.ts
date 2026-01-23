@@ -59,25 +59,40 @@ app.use('/api/services', servicesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
 
-// Serve frontend static files
-// __dirname in compiled code is backend/dist/, so go up to project root
+
 const projectRoot = path.resolve(__dirname, '../..');
 const frontendDistPath = path.join(projectRoot, 'frontend/dist');
 
-console.log('Frontend dist path:', frontendDistPath);
+// Check if index.html is in dist/client (Mocha plugin structure) or dist root
+const clientPath = path.join(frontendDistPath, 'client');
+const indexInClient = existsSync(path.join(clientPath, 'index.html'));
+const indexInRoot = existsSync(path.join(frontendDistPath, 'index.html'));
 
-// Check if frontend dist exists
-if (existsSync(frontendDistPath)) {
-  app.use(express.static(frontendDistPath));
+let actualFrontendPath = frontendDistPath;
+if (indexInClient) {
+  actualFrontendPath = clientPath;
+  console.log('Frontend found in:', actualFrontendPath);
+} else if (indexInRoot) {
+  console.log('Frontend found in:', actualFrontendPath);
+} else {
+  console.warn(`Frontend index.html not found. Checked:`);
+  console.warn(`  - ${path.join(frontendDistPath, 'index.html')}`);
+  console.warn(`  - ${path.join(clientPath, 'index.html')}`);
+}
+
+if (indexInClient || indexInRoot) {
+  app.use(express.static(actualFrontendPath));
   
   // Serve index.html for all non-API routes (SPA routing)
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(frontendDistPath, 'index.html'));
+    res.sendFile(path.join(actualFrontendPath, 'index.html'));
   });
 } else {
-  console.warn(`Frontend dist folder not found at: ${frontendDistPath}`);
   app.get('*', (_req, res) => {
-    res.status(404).json({ error: 'Frontend not built. Please run: cd frontend && npm run build' });
+    res.status(404).json({ 
+      error: 'Frontend not built. Please run: cd frontend && npm run build',
+      checked: [frontendDistPath, clientPath]
+    });
   });
 }
 

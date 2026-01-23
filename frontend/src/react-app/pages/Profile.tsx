@@ -570,7 +570,7 @@ export default function Profile() {
                       alt="Profile"
                       className="w-full h-full rounded-full object-cover"
                     />
-                  ) : user?.google_user_data.picture ? (
+                  ) : user?.google_user_data?.picture ? (
                     <img
                       src={user.google_user_data.picture}
                       alt="Profile"

@@ -21,18 +21,11 @@ router.post('/otp/send', async (req: Request, res: Response) => {
     const otp = await generateOTP();
 
     const apiKey = process.env.FAST2SMS_API_KEY || "";
-    const isDevelopment = process.env.NODE_ENV !== 'production';
     
-    if (!apiKey && !isDevelopment) {
-      return res.status(500).json({ 
-        success: false, 
-        message: "SMS service not configured. Please contact support." 
-      });
-    }
-    
-    if (!apiKey && isDevelopment) {
+    // If no API key, use development mode (log OTP to console)
+    if (!apiKey) {
       console.log(`\n🔐 DEVELOPMENT MODE - OTP for ${phone_number}: ${otp}\n`);
-      console.log(`⚠️  SMS service not configured. In production, add FAST2SMS_API_KEY to .env\n`);
+      console.log(`⚠️  SMS service not configured. Add FAST2SMS_API_KEY to .env for production\n`);
       
       await storeOTP(phone_number, otp);
       

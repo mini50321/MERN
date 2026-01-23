@@ -36,6 +36,26 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/my-posts', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const news = await NewsUpdate.find({ posted_by_user_id: req.user!.user_id })
+      .sort({ created_at: -1 });
+
+    const formatted = news.map(item => {
+      const obj = item.toObject() as any;
+      return {
+        ...obj,
+        id: item._id.toString()
+      };
+    });
+
+    return res.json(formatted);
+  } catch (error) {
+    console.error('Get my posts error:', error);
+    return res.status(500).json({ error: 'Failed to fetch posts' });
+  }
+});
+
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const news = await NewsUpdate.create({

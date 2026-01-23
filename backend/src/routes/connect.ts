@@ -69,7 +69,7 @@ router.get('/users', authMiddleware, async (req: AuthRequest, res: Response) => 
   }
 });
 
-router.get('/followers', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/followers', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {
@@ -78,7 +78,7 @@ router.get('/followers', authMiddleware, async (req: AuthRequest, res: Response)
   }
 });
 
-router.get('/following', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/following', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {
@@ -87,7 +87,7 @@ router.get('/following', authMiddleware, async (req: AuthRequest, res: Response)
   }
 });
 
-router.get('/requests', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/requests', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {
@@ -96,7 +96,7 @@ router.get('/requests', authMiddleware, async (req: AuthRequest, res: Response) 
   }
 });
 
-router.get('/blocked', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/blocked', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {
@@ -105,7 +105,7 @@ router.get('/blocked', authMiddleware, async (req: AuthRequest, res: Response) =
   }
 });
 
-router.post('/follow/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/follow/:userId', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {
@@ -114,7 +114,7 @@ router.post('/follow/:userId', authMiddleware, async (req: AuthRequest, res: Res
   }
 });
 
-router.post('/block/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/block/:userId', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {
@@ -123,7 +123,7 @@ router.post('/block/:userId', authMiddleware, async (req: AuthRequest, res: Resp
   }
 });
 
-router.post('/unblock/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/unblock/:userId', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {
@@ -132,7 +132,7 @@ router.post('/unblock/:userId', authMiddleware, async (req: AuthRequest, res: Re
   }
 });
 
-router.post('/request/:requestId/accept', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/request/:requestId/accept', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {
@@ -141,7 +141,7 @@ router.post('/request/:requestId/accept', authMiddleware, async (req: AuthReques
   }
 });
 
-router.post('/request/:requestId/reject', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/request/:requestId/reject', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {

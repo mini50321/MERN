@@ -38,6 +38,7 @@ import {
   Scissors,
 } from "lucide-react";
 import EditNewsModal from "@/react-app/components/EditNewsModal";
+import CreateNewsModal from "@/react-app/components/CreateNewsModal";
 import EditExhibitionModal from "@/react-app/components/EditExhibitionModal";
 import EditJobModal from "@/react-app/components/EditJobModal";
 import EditFundraiserModal from "@/react-app/components/EditFundraiserModal";
@@ -88,6 +89,7 @@ export default function AdminDashboard() {
   const [adminRole, setAdminRole] = useState<string>("");
   const [permissions, setPermissions] = useState<Record<string, string>>({});
   const [editingPost, setEditingPost] = useState<NewsWithCounts | null>(null);
+  const [showCreateNews, setShowCreateNews] = useState(false);
   const [editingExhibition, setEditingExhibition] = useState<ExhibitionWithCounts | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editingFundraiser, setEditingFundraiser] = useState<any>(null);
@@ -509,13 +511,26 @@ export default function AdminDashboard() {
                   <KYCManagementPanel submissions={kycSubmissions} onReload={loadData} canEdit={permissions.kyc === "edit"} />
                 )}
                 {activeTab === "posts" && (
-                  <PostsTable 
-                    posts={posts} 
-                    onDelete={handleDeletePost}
-                    onEdit={(post) => setEditingPost(post)}
-                    onReload={loadData}
-                    canEdit={permissions.posts === "edit"}
-                  />
+                  <>
+                    {permissions.posts === "edit" && (
+                      <div className="mb-4 flex justify-end">
+                        <button
+                          onClick={() => setShowCreateNews(true)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Create News Post
+                        </button>
+                      </div>
+                    )}
+                    <PostsTable 
+                      posts={posts} 
+                      onDelete={handleDeletePost}
+                      onEdit={(post) => setEditingPost(post)}
+                      onReload={loadData}
+                      canEdit={permissions.posts === "edit"}
+                    />
+                  </>
                 )}
                 {activeTab === "exhibitions" && (
                   <ExhibitionsTable

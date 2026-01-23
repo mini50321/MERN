@@ -65,33 +65,59 @@ export async function verifyOTP(
   phoneNumber: string,
   otp: string
 ): Promise<{ valid: boolean; message: string }> {
-  const otpRecord = await OTP.findOne({
-    phone_number: phoneNumber,
-    otp,
-    verified: false
-  }).sort({ created_at: -1 });
+  try {
+    console.log(`[OTP Verify] Attempting to verify OTP for ${phoneNumber}`);
+    
+    // Find the most recent OTP for this phone number
+    const otpRecord = await OTP.findOne({
+      phone_number: phoneNumber,
+      verified: false
+    }).sort({ created_at: -1 });
 
-  if (!otpRecord) {
+    if (!otpRecord) {
+      console.log(`[OTP Verify] No unverified OTP found for ${phoneNumber}`);
+      return {
+        valid: false,
+        message: "Invalid OTP code. Please request a new OTP.",
+      };
+    }
+
+    console.log(`[OTP Verify] Found OTP record. Expected: ${otpRecord.otp}, Received: ${otp}`);
+
+    // Check if OTP matches
+    if (otpRecord.otp !== otp) {
+      console.log(`[OTP Verify] OTP mismatch for ${phoneNumber}`);
+      return {
+        valid: false,
+        message: "Invalid OTP code",
+      };
+    }
+
+    // Check if expired
+    if (otpRecord.expires_at < new Date()) {
+      console.log(`[OTP Verify] OTP expired for ${phoneNumber}. Expires: ${otpRecord.expires_at}, Now: ${new Date()}`);
+      return {
+        valid: false,
+        message: "OTP has expired. Please request a new OTP.",
+      };
+    }
+
+    // Mark as verified
+    otpRecord.verified = true;
+    await otpRecord.save();
+
+    console.log(`[OTP Verify] Successfully verified OTP for ${phoneNumber}`);
+    return {
+      valid: true,
+      message: "OTP verified successfully",
+    };
+  } catch (error) {
+    console.error("[OTP Verify] Error during verification:", error);
     return {
       valid: false,
-      message: "Invalid OTP code",
+      message: "Failed to verify OTP. Please try again.",
     };
   }
-
-  if (otpRecord.expires_at < new Date()) {
-    return {
-      valid: false,
-      message: "OTP has expired",
-    };
-  }
-
-  otpRecord.verified = true;
-  await otpRecord.save();
-
-  return {
-    valid: true,
-    message: "OTP verified successfully",
-  };
 }
 
 export async function cleanupExpiredOTPs(): Promise<void> {

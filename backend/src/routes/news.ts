@@ -77,6 +77,15 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error) {
+    console.error('Get saved news error:', error);
+    return res.status(500).json({ error: 'Failed to fetch saved news' });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const news = await NewsUpdate.findById(req.params.id);
@@ -179,15 +188,6 @@ router.post('/:id/save', authMiddleware, async (req: AuthRequest, res: Response)
   } catch (error) {
     console.error('Save news error:', error);
     return res.status(500).json({ error: 'Failed to save news' });
-  }
-});
-
-router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) => {
-  try {
-    return res.json([]);
-  } catch (error) {
-    console.error('Get saved news error:', error);
-    return res.status(500).json({ error: 'Failed to fetch saved news' });
   }
 });
 

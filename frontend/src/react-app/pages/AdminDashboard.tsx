@@ -530,7 +530,7 @@ export default function AdminDashboard() {
                 {activeTab === "posts" && (
                   <>
                     {permissions.posts === "edit" && (
-                      <div className="mb-4 flex justify-end">
+                      <div className="mb-4 flex justify-start">
                         <button
                           onClick={() => setShowCreateNews(true)}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"

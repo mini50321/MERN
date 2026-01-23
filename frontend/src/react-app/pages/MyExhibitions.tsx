@@ -26,11 +26,17 @@ export default function MyExhibitions() {
   const fetchMyExhibitions = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/exhibitions/my-exhibitions");
+      const response = await fetch("/api/exhibitions/my-exhibitions", {
+        credentials: "include"
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      setExhibitions(data);
+      setExhibitions(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching exhibitions:", error);
+      setExhibitions([]);
     } finally {
       setIsLoading(false);
     }

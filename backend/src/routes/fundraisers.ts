@@ -1,4 +1,4 @@
-import express, { type Request, type Response } from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
@@ -27,13 +27,31 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/upload-image', authMiddleware, upload.single('image'), async (req: AuthRequest, res: Response) => {
+router.post('/upload-image', authMiddleware, (req: AuthRequest, res: Response, next: NextFunction) => {
+  upload.single('image')(req, res, (err: any) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ error: 'Image file is too large. Maximum size is 10MB.' });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(400).json({ error: err.message || 'File upload error' });
+    }
+    next();
+  });
+}, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
     const file = req.file;
+    
+    if (!file.mimetype.startsWith('image/')) {
+      return res.status(400).json({ error: 'File must be an image' });
+    }
+
     const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
     return res.json({
@@ -41,7 +59,7 @@ router.post('/upload-image', authMiddleware, upload.single('image'), async (req:
       image_url: base64Image,
       message: 'Image uploaded successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload fundraiser image error:', error);
     return res.status(500).json({ error: 'Failed to upload image' });
   }

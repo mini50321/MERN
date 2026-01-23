@@ -1,8 +1,23 @@
 import express, { type Request, type Response } from 'express';
+import multer from 'multer';
 import { Exhibition } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -111,5 +126,24 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
-export default router;
+router.post('/upload-image', authMiddleware, upload.single('image'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
 
+    const file = req.file;
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    return res.json({
+      success: true,
+      image_url: base64Image,
+      message: 'Image uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Upload exhibition image error:', error);
+    return res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+export default router;

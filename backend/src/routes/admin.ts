@@ -324,6 +324,19 @@ router.post('/content/fetch', authMiddleware, async (_req: AuthRequest, res: Res
   }
 });
 
+router.post('/content/fetch-exhibitions', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    return res.json({
+      success: true,
+      items_fetched: 0,
+      message: 'Exhibition fetching feature not yet implemented'
+    });
+  } catch (error) {
+    console.error('Fetch exhibitions error:', error);
+    return res.status(500).json({ error: 'Failed to fetch exhibitions' });
+  }
+});
+
 router.put('/content/:id/approve', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true, message: 'Content approved' });

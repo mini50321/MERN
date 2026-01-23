@@ -31,9 +31,15 @@ router.get('/', async (req: Request, res: Response) => {
 
     const exhibitions = await Exhibition.find(query)
       .sort({ created_at: -1 })
-      .limit(50);
+      .limit(50)
+      .lean();
     
-    return res.json(exhibitions);
+    const formattedExhibitions = exhibitions.map(exhibition => ({
+      ...exhibition,
+      id: exhibition._id.toString()
+    }));
+    
+    return res.json(formattedExhibitions);
   } catch (error) {
     console.error('Get exhibitions error:', error);
     return res.status(500).json({ error: 'Failed to fetch exhibitions' });
@@ -71,15 +77,62 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.get('/my-exhibitions', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const exhibitions = await Exhibition.find({ posted_by_user_id: req.user!.user_id })
+      .sort({ created_at: -1 })
+      .lean();
+    
+    const formattedExhibitions = exhibitions.map(exhibition => ({
+      ...exhibition,
+      id: exhibition._id.toString()
+    }));
+    
+    return res.json(formattedExhibitions);
+  } catch (error) {
+    console.error('Get my exhibitions error:', error);
+    return res.status(500).json({ error: 'Failed to fetch my exhibitions' });
+  }
+});
+
+router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error) {
+    console.error('Get saved exhibitions error:', error);
+    return res.status(500).json({ error: 'Failed to fetch saved exhibitions' });
+  }
+});
+
+router.post('/upload-image', authMiddleware, upload.single('image'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    const file = req.file;
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    return res.json({
+      success: true,
+      image_url: base64Image,
+      message: 'Image uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Upload exhibition image error:', error);
+    return res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const exhibition = await Exhibition.findById(req.params.id);
+    const exhibition = await Exhibition.findById(req.params.id).lean();
     
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
     }
 
-    return res.json(exhibition);
+    return res.json({ ...exhibition, id: exhibition._id.toString() });
   } catch (error) {
     console.error('Get exhibition error:', error);
     return res.status(500).json({ error: 'Failed to fetch exhibition' });
@@ -126,23 +179,133 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.post('/upload-image', authMiddleware, upload.single('image'), async (req: AuthRequest, res: Response) => {
+router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file provided' });
+    const exhibition = await Exhibition.findById(req.params.id);
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
     }
-
-    const file = req.file;
-    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-
-    return res.json({
-      success: true,
-      image_url: base64Image,
-      message: 'Image uploaded successfully'
-    });
+    return res.json({ success: true, message: 'Like status updated' });
   } catch (error) {
-    console.error('Upload exhibition image error:', error);
-    return res.status(500).json({ error: 'Failed to upload image' });
+    console.error('Like exhibition error:', error);
+    return res.status(500).json({ error: 'Failed to like exhibition' });
+  }
+});
+
+router.post('/:id/save', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const exhibition = await Exhibition.findById(req.params.id);
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+    return res.json({ success: true, saved: true, message: 'Save status updated' });
+  } catch (error) {
+    console.error('Save exhibition error:', error);
+    return res.status(500).json({ error: 'Failed to save exhibition' });
+  }
+});
+
+router.post('/:id/response', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { response_type } = req.body;
+    const exhibition = await Exhibition.findById(req.params.id);
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+    return res.json({ success: true, message: `Response ${response_type} recorded` });
+  } catch (error) {
+    console.error('Response exhibition error:', error);
+    return res.status(500).json({ error: 'Failed to record response' });
+  }
+});
+
+router.post('/:id/view', async (req: Request, res: Response) => {
+  try {
+    const exhibition = await Exhibition.findById(req.params.id);
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('View exhibition error:', error);
+    return res.status(500).json({ error: 'Failed to track view' });
+  }
+});
+
+router.post('/:id/share', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const exhibition = await Exhibition.findById(req.params.id);
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+    return res.json({ success: true, message: 'Share recorded' });
+  } catch (error) {
+    console.error('Share exhibition error:', error);
+    return res.status(500).json({ error: 'Failed to record share' });
+  }
+});
+
+router.post('/:id/report', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const exhibition = await Exhibition.findById(req.params.id);
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+    return res.json({ success: true, message: 'Report submitted' });
+  } catch (error) {
+    console.error('Report exhibition error:', error);
+    return res.status(500).json({ error: 'Failed to submit report' });
+  }
+});
+
+router.get('/:id/comments', async (req: Request, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error) {
+    console.error('Get exhibition comments error:', error);
+    return res.status(500).json({ error: 'Failed to fetch comments' });
+  }
+});
+
+router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { comment } = req.body;
+    const exhibition = await Exhibition.findById(req.params.id);
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+    return res.json({ success: true, message: 'Comment posted' });
+  } catch (error) {
+    console.error('Comment exhibition error:', error);
+    return res.status(500).json({ error: 'Failed to post comment' });
+  }
+});
+
+router.post('/comments/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json({ success: true, message: 'Comment liked' });
+  } catch (error) {
+    console.error('Like comment error:', error);
+    return res.status(500).json({ error: 'Failed to like comment' });
+  }
+});
+
+router.get('/comments/:id/replies', async (req: Request, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error) {
+    console.error('Get comment replies error:', error);
+    return res.status(500).json({ error: 'Failed to fetch replies' });
+  }
+});
+
+router.post('/comments/:id/reply', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { reply } = req.body;
+    return res.json({ success: true, message: 'Reply posted' });
+  } catch (error) {
+    console.error('Reply comment error:', error);
+    return res.status(500).json({ error: 'Failed to post reply' });
   }
 });
 

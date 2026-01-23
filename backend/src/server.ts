@@ -23,6 +23,7 @@ import serviceOrdersRoutes from './routes/serviceOrders.js';
 import kycRoutes from './routes/kyc.js';
 import connectRoutes from './routes/connect.js';
 import gamificationRoutes from './routes/gamification.js';
+import adsRoutes from './routes/ads.js';
 import adminRoutes from './routes/admin.js';
 
 dotenv.config();
@@ -64,6 +65,7 @@ app.use('/api/service-orders', serviceOrdersRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/connect', connectRoutes);
 app.use('/api', gamificationRoutes);
+app.use('/api/ads', adsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
 

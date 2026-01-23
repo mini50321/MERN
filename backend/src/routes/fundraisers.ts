@@ -69,23 +69,47 @@ router.post('/upload-image', authMiddleware, upload.single('image'), handleMulte
   }
 });
 
-router.post('/upload-document', authMiddleware, upload.single('document'), async (req: AuthRequest, res: Response) => {
+router.post('/upload-document', authMiddleware, (req: AuthRequest, res: Response, next: NextFunction) => {
+  upload.single('document')(req, res, (err: any) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ error: 'Document file is too large. Maximum size is 10MB.' });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(400).json({ error: err.message || 'File upload error' });
+    }
+    return next();
+  });
+}, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No document file provided' });
     }
 
     const file = req.file;
-    const documentType = req.body.document_type || 'Other';
-    const base64File = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    
+    if (!file.mimetype.startsWith('image/') && file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ error: 'File must be an image or PDF' });
+    }
 
-    return res.json({
-      success: true,
-      file_url: base64File,
-      file_name: file.originalname,
-      document_type: documentType,
-      message: 'Document uploaded successfully'
-    });
+    const documentType = req.body.document_type || 'Other';
+    
+    try {
+      const base64File = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+      return res.json({
+        success: true,
+        file_url: base64File,
+        file_name: file.originalname,
+        document_type: documentType,
+        message: 'Document uploaded successfully'
+      });
+    } catch (conversionError) {
+      console.error('Base64 conversion error:', conversionError);
+      return res.status(500).json({ error: 'Failed to process document. File may be too large.' });
+    }
   } catch (error) {
     console.error('Upload fundraiser document error:', error);
     return res.status(500).json({ error: 'Failed to upload document' });

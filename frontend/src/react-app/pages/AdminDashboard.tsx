@@ -587,6 +587,17 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {showCreateNews && (
+        <CreateNewsModal
+          isOpen={true}
+          onClose={() => setShowCreateNews(false)}
+          onSuccess={() => {
+            setShowCreateNews(false);
+            loadData();
+          }}
+        />
+      )}
+
       {editingPost && (
         <EditNewsModal
           post={editingPost}

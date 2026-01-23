@@ -298,7 +298,7 @@ router.get('/comments/:id/replies', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/comments/:id/reply', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/comments/:id/reply', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true, message: 'Reply posted' });
   } catch (error) {

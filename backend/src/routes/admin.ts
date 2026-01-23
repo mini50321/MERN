@@ -302,5 +302,14 @@ router.delete('/jobs/:id', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
+router.get('/content/pending-news', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error) {
+    console.error('Get pending news error:', error);
+    return res.status(500).json({ error: 'Failed to fetch pending news' });
+  }
+});
+
 export default router;
 

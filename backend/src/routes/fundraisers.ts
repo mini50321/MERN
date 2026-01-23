@@ -38,7 +38,7 @@ router.post('/upload-image', authMiddleware, (req: AuthRequest, res: Response, n
       }
       return res.status(400).json({ error: err.message || 'File upload error' });
     }
-    next();
+    return next();
   });
 }, async (req: AuthRequest, res: Response) => {
   try {

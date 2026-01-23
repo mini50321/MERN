@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import EditNewsModal from "@/react-app/components/EditNewsModal";
 import CreateNewsModal from "@/react-app/components/CreateNewsModal";
+import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import EditExhibitionModal from "@/react-app/components/EditExhibitionModal";
 import EditJobModal from "@/react-app/components/EditJobModal";
 import EditFundraiserModal from "@/react-app/components/EditFundraiserModal";
@@ -90,6 +91,8 @@ export default function AdminDashboard() {
   const [permissions, setPermissions] = useState<Record<string, string>>({});
   const [editingPost, setEditingPost] = useState<NewsWithCounts | null>(null);
   const [showCreateNews, setShowCreateNews] = useState(false);
+  const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [editingExhibition, setEditingExhibition] = useState<ExhibitionWithCounts | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editingFundraiser, setEditingFundraiser] = useState<any>(null);
@@ -258,16 +261,30 @@ export default function AdminDashboard() {
     window.location.href = "/";
   };
 
-  const handleDeletePost = async (postId: number) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
+  const handleDeletePost = (postId: number) => {
+    setDeletingPostId(postId);
+  };
 
-    const res = await fetch(`/api/admin/posts/${postId}`, {
-      method: "DELETE",
-    });
+  const confirmDeletePost = async () => {
+    if (!deletingPostId) return;
 
-    if (res.ok) {
-      loadData();
-      alert("Post deleted successfully");
+    setIsDeletingPost(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${deletingPostId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        loadData();
+        setDeletingPostId(null);
+      } else {
+        alert("Failed to delete post");
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      alert("An error occurred while deleting the post");
+    } finally {
+      setIsDeletingPost(false);
     }
   };
 
@@ -595,6 +612,18 @@ export default function AdminDashboard() {
             setShowCreateNews(false);
             loadData();
           }}
+        />
+      )}
+
+      {deletingPostId && (
+        <DeleteConfirmModal
+          isOpen={!!deletingPostId}
+          onClose={() => setDeletingPostId(null)}
+          onConfirm={confirmDeletePost}
+          title="Delete News Post"
+          message="Are you sure you want to delete this news post?"
+          itemName={posts.find(p => p.id === deletingPostId)?.title}
+          isDeleting={isDeletingPost}
         />
       )}
 

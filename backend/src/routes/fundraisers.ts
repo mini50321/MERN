@@ -10,10 +10,14 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image and PDF files are allowed'));
+    try {
+      if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image and PDF files are allowed'));
+      }
+    } catch (error) {
+      cb(error as Error);
     }
   }
 });
@@ -27,20 +31,20 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
-router.post('/upload-image', authMiddleware, (req: AuthRequest, res: Response, next: NextFunction) => {
-  upload.single('image')(req, res, (err: any) => {
-    if (err) {
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({ error: 'Image file is too large. Maximum size is 10MB.' });
-        }
-        return res.status(400).json({ error: err.message });
-      }
-      return res.status(400).json({ error: err.message || 'File upload error' });
+const handleMulterError = (err: any, _req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File is too large. Maximum size is 10MB.' });
     }
-    return next();
-  });
-}, async (req: AuthRequest, res: Response) => {
+    return res.status(400).json({ error: err.message });
+  }
+  if (err) {
+    return res.status(400).json({ error: err.message || 'File upload error' });
+  }
+  return next();
+};
+
+router.post('/upload-image', authMiddleware, upload.single('image'), handleMulterError, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });

@@ -8,14 +8,21 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { status, job_type } = req.query;
     const query: any = {};
-    
+
     if (status) query.status = status;
     if (job_type) query.job_type = job_type;
 
-    const jobs = await Job.find(query)
-      .sort({ created_at: -1 });
-    
-    return res.json(jobs);
+    const jobs = await Job.find(query).sort({ created_at: -1 });
+
+    const formattedJobs = jobs.map(job => {
+      const obj = job.toObject() as any;
+      return {
+        ...obj,
+        id: job._id.toString()
+      };
+    });
+
+    return res.json(formattedJobs);
   } catch (error) {
     console.error('Get jobs error:', error);
     return res.status(500).json({ error: 'Failed to fetch jobs' });
@@ -98,6 +105,21 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
   } catch (error) {
     console.error('Delete job error:', error);
     return res.status(500).json({ error: 'Failed to delete job' });
+  }
+});
+
+router.post('/:id/apply', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const job = await Job.findById(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Apply to job error:', error);
+    return res.status(500).json({ error: 'Failed to submit application' });
   }
 });
 

@@ -1,8 +1,23 @@
 import express, { type Request, type Response } from 'express';
+import multer from 'multer';
 import { ServiceManual } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  }
+});
 
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -42,6 +57,36 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Create service manual error:', error);
     return res.status(500).json({ error: 'Failed to create service manual' });
+  }
+});
+
+router.post('/upload', authMiddleware, upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const file = req.file;
+    const fileUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    const manual = await ServiceManual.create({
+      title: req.body.title,
+      manufacturer: req.body.manufacturer || null,
+      model_number: req.body.model_number || null,
+      equipment_type: req.body.equipment_type || null,
+      description: req.body.description || null,
+      file_url: fileUrl,
+      thumbnail_url: null,
+      uploaded_by_user_id: req.user!.user_id,
+      is_verified: false,
+      download_count: 0,
+      tags: null
+    });
+
+    return res.status(201).json({ id: manual._id, success: true });
+  } catch (error) {
+    console.error('Upload service manual error:', error);
+    return res.status(500).json({ error: 'Failed to upload service manual' });
   }
 });
 

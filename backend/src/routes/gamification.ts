@@ -3,7 +3,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/weekly-report', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/weekly-report', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     const now = new Date();
     const weekStart = new Date(now);

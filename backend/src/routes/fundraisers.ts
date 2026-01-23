@@ -18,9 +18,8 @@ const upload = multer({
   }
 });
 
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
-    const { category, status } = req.query;
     return res.json([]);
   } catch (error) {
     console.error('Get fundraisers error:', error);
@@ -80,9 +79,9 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       case_type,
       goal_amount,
       beneficiary_name,
-      beneficiary_contact,
-      image_url,
-      end_date,
+      beneficiary_contact: _beneficiary_contact,
+      image_url: _image_url,
+      end_date: _end_date,
       documents
     } = req.body;
 

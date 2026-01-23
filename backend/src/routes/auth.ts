@@ -71,30 +71,43 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
     const verification = await verifyOTP(phone_number, otp);
 
     if (!verification.valid) {
+      console.log(`[Auth] OTP verification failed: ${verification.message}`);
       return res.status(400).json({ success: false, message: verification.message });
     }
 
+    console.log(`[Auth] OTP verified successfully. Looking up user: ${phone_number}`);
     let user = await User.findOne({ phone: phone_number });
 
     if (!user) {
+      console.log(`[Auth] User not found, creating new user for ${phone_number}`);
       const referralCode = `BIO${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       
-      user = await User.create({
-        user_id: userId,
-        phone: phone_number,
-        referral_code: referralCode,
-        onboarding_completed: false
-      });
+      try {
+        user = await User.create({
+          user_id: userId,
+          phone: phone_number,
+          referral_code: referralCode,
+          onboarding_completed: false
+        });
+        console.log(`[Auth] User created successfully: ${user.user_id}`);
+      } catch (createError) {
+        console.error(`[Auth] Error creating user:`, createError);
+        throw createError;
+      }
+    } else {
+      console.log(`[Auth] Existing user found: ${user.user_id}`);
     }
 
     if (!user) {
+      console.error(`[Auth] User is null after creation/lookup`);
       return res.status(500).json({ 
         success: false, 
         message: "Failed to create user account. Please try again." 
       });
     }
 
+    console.log(`[Auth] Generating JWT token for user: ${user.user_id}`);
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
     const token = jwt.sign(
       { user_id: user.user_id },
@@ -104,6 +117,7 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
 
     const isProduction = process.env.NODE_ENV === 'production';
     
+    console.log(`[Auth] Setting cookie. Production: ${isProduction}`);
     res.cookie('mavy_session', token, {
       httpOnly: true,
       path: '/',
@@ -112,6 +126,7 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
       maxAge: 60 * 24 * 60 * 60 * 1000
     });
 
+    console.log(`[Auth] Login successful for user: ${user.user_id}`);
     return res.json({ 
       success: true, 
       message: "Login successful",

@@ -93,6 +93,7 @@ export default function AdminDashboard() {
   const [showCreateNews, setShowCreateNews] = useState(false);
   const [deletingPostId, setDeletingPostId] = useState<number | null>(null);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
+  const [isFetchingNews, setIsFetchingNews] = useState(false);
   const [editingExhibition, setEditingExhibition] = useState<ExhibitionWithCounts | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [editingFundraiser, setEditingFundraiser] = useState<any>(null);
@@ -285,6 +286,31 @@ export default function AdminDashboard() {
       alert("An error occurred while deleting the post");
     } finally {
       setIsDeletingPost(false);
+    }
+  };
+
+  const handleFetchNews = async () => {
+    if (permissions.posts !== "edit") return;
+    
+    setIsFetchingNews(true);
+    try {
+      const res = await fetch("/api/admin/content/fetch", {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Successfully fetched ${data.items_fetched} news items for approval`);
+        loadData();
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || "Failed to fetch news");
+      }
+    } catch (error) {
+      console.error("Error fetching news:", error);
+      alert("An error occurred while fetching news");
+    } finally {
+      setIsFetchingNews(false);
     }
   };
 
@@ -530,13 +556,32 @@ export default function AdminDashboard() {
                 {activeTab === "posts" && (
                   <>
                     {permissions.posts === "edit" && (
-                      <div className="mb-4 flex justify-start">
+                      <div className="mb-4 flex justify-between items-center">
                         <button
                           onClick={() => setShowCreateNews(true)}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
                         >
                           <Plus className="w-4 h-4" />
                           Create News Post
+                        </button>
+                        <button
+                          onClick={handleFetchNews}
+                          disabled={isFetchingNews}
+                          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isFetchingNews ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              <span>Fetching...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                              </svg>
+                              <span>Fetch News with AI</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     )}
@@ -977,7 +1022,6 @@ function PostsTable({
   onReload: () => void;
   canEdit: boolean;
 }) {
-  const [isFetching, setIsFetching] = useState(false);
   const [pendingNews, setPendingNews] = useState<any[]>([]);
 
   useEffect(() => {
@@ -993,31 +1037,6 @@ function PostsTable({
       }
     } catch (error) {
       console.error("Error loading pending news:", error);
-    }
-  };
-
-  const handleFetchNews = async () => {
-    if (!canEdit) return;
-    
-    setIsFetching(true);
-    try {
-      const res = await fetch("/api/admin/content/fetch", {
-        method: "POST",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        alert(`Successfully fetched ${data.items_fetched} news items for approval`);
-        loadPendingNews();
-      } else {
-        const errorData = await res.json();
-        alert(errorData.error || "Failed to fetch news");
-      }
-    } catch (error) {
-      console.error("Error fetching news:", error);
-      alert("An error occurred while fetching news");
-    } finally {
-      setIsFetching(false);
     }
   };
 
@@ -1085,29 +1104,6 @@ function PostsTable({
 
   return (
     <div>
-      {canEdit && (
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={handleFetchNews}
-            disabled={isFetching}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isFetching ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Fetching...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-                <span>Fetch News with AI</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
 
       {/* Pending News Approvals */}
       {pendingNews.length > 0 && (

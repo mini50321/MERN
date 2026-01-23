@@ -68,7 +68,7 @@ export async function verifyOTP(
   try {
     console.log(`[OTP Verify] Attempting to verify OTP for ${phoneNumber}`);
     
-    // Find the most recent OTP for this phone number
+    
     const otpRecord = await OTP.findOne({
       phone_number: phoneNumber,
       verified: false
@@ -84,7 +84,7 @@ export async function verifyOTP(
 
     console.log(`[OTP Verify] Found OTP record. Expected: ${otpRecord.otp}, Received: ${otp}`);
 
-    // Check if OTP matches
+    
     if (otpRecord.otp !== otp) {
       console.log(`[OTP Verify] OTP mismatch for ${phoneNumber}`);
       return {
@@ -93,7 +93,7 @@ export async function verifyOTP(
       };
     }
 
-    // Check if expired
+   
     if (otpRecord.expires_at < new Date()) {
       console.log(`[OTP Verify] OTP expired for ${phoneNumber}. Expires: ${otpRecord.expires_at}, Now: ${new Date()}`);
       return {
@@ -102,7 +102,7 @@ export async function verifyOTP(
       };
     }
 
-    // Mark as verified
+    
     otpRecord.verified = true;
     await otpRecord.save();
 

@@ -115,7 +115,7 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
       { expiresIn: '60d' }
     );
 
-    // Check if using HTTPS
+    
     const isHTTPS = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
     const isProduction = process.env.NODE_ENV === 'production';
     
@@ -124,7 +124,7 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
       httpOnly: true,
       path: '/',
       sameSite: isHTTPS ? (isProduction ? 'none' : 'lax') : 'lax',
-      secure: isHTTPS, // Only secure over HTTPS
+      secure: isHTTPS, 
       maxAge: 60 * 24 * 60 * 60 * 1000
     });
 

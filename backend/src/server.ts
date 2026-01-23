@@ -63,7 +63,7 @@ app.use('/api', adminRoutes);
 const projectRoot = path.resolve(__dirname, '../..');
 const frontendDistPath = path.join(projectRoot, 'frontend/dist');
 
-// Check if index.html is in dist/client (Mocha plugin structure) or dist root
+
 const clientPath = path.join(frontendDistPath, 'client');
 const indexInClient = existsSync(path.join(clientPath, 'index.html'));
 const indexInRoot = existsSync(path.join(frontendDistPath, 'index.html'));
@@ -83,7 +83,7 @@ if (indexInClient) {
 if (indexInClient || indexInRoot) {
   app.use(express.static(actualFrontendPath));
   
-  // Serve index.html for all non-API routes (SPA routing)
+
   app.get('*', (_req, res) => {
     res.sendFile(path.join(actualFrontendPath, 'index.html'));
   });

@@ -115,14 +115,16 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
       { expiresIn: '60d' }
     );
 
+    // Check if using HTTPS
+    const isHTTPS = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
     const isProduction = process.env.NODE_ENV === 'production';
     
-    console.log(`[Auth] Setting cookie. Production: ${isProduction}`);
+    console.log(`[Auth] Setting cookie. Production: ${isProduction}, HTTPS: ${isHTTPS}`);
     res.cookie('mavy_session', token, {
       httpOnly: true,
       path: '/',
-      sameSite: isProduction ? 'none' : 'lax',
-      secure: isProduction,
+      sameSite: isHTTPS ? (isProduction ? 'none' : 'lax') : 'lax',
+      secure: isHTTPS, // Only secure over HTTPS
       maxAge: 60 * 24 * 60 * 60 * 1000
     });
 

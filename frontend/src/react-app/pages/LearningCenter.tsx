@@ -52,10 +52,11 @@ export default function LearningCenter() {
       const res = await fetch(`/api/courses?category=${selectedCategory}`);
       if (res.ok) {
         const data = await res.json();
-        setCourses(data);
+        setCourses(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error("Error loading courses:", error);
+      setCourses([]);
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +89,7 @@ export default function LearningCenter() {
   const handleCourseSubmitted = () => {
     setShowSuccessToast(true);
     setTimeout(() => setShowSuccessToast(false), 4000);
+    loadCourses();
   };
 
   const filteredCourses = selectedCategory === "All"

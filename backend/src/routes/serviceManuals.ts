@@ -28,9 +28,15 @@ router.get('/', async (req: Request, res: Response) => {
     if (manufacturer) query.manufacturer = manufacturer;
 
     const manuals = await ServiceManual.find(query)
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .lean();
     
-    return res.json(manuals);
+    const formattedManuals = manuals.map(manual => ({
+      ...manual,
+      id: manual._id.toString()
+    }));
+    
+    return res.json(formattedManuals);
   } catch (error) {
     console.error('Get service manuals error:', error);
     return res.status(500).json({ error: 'Failed to fetch service manuals' });
@@ -110,14 +116,35 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const manual = await ServiceManual.findOneAndUpdate(
-      { 
-        _id: req.params.id,
-        uploaded_by_user_id: req.user!.user_id 
-      },
-      { $set: req.body },
-      { new: true }
-    );
+    const manualId = req.params.id;
+    let manual;
+    
+    if (manualId.match(/^[0-9a-fA-F]{24}$/)) {
+      manual = await ServiceManual.findOneAndUpdate(
+        { 
+          _id: manualId,
+          uploaded_by_user_id: req.user!.user_id 
+        },
+        { $set: req.body },
+        { new: true }
+      );
+    } else {
+      const allManuals = await ServiceManual.find({ uploaded_by_user_id: req.user!.user_id }).lean();
+      const found = allManuals.find(m => {
+        const idNum = parseInt(m._id.toString().slice(-8), 16);
+        return idNum === parseInt(manualId, 10);
+      });
+      if (found) {
+        manual = await ServiceManual.findOneAndUpdate(
+          { 
+            _id: found._id,
+            uploaded_by_user_id: req.user!.user_id 
+          },
+          { $set: req.body },
+          { new: true }
+        );
+      }
+    }
 
     if (!manual) {
       return res.status(404).json({ error: 'Service manual not found' });
@@ -132,15 +159,33 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const manual = await ServiceManual.findOneAndDelete({ 
-      _id: req.params.id,
-      uploaded_by_user_id: req.user!.user_id 
-    });
+    const manualId = req.params.id;
+    let manual;
+    
+    if (manualId.match(/^[0-9a-fA-F]{24}$/)) {
+      manual = await ServiceManual.findOne({ 
+        _id: manualId,
+        uploaded_by_user_id: req.user!.user_id 
+      });
+    } else {
+      const allManuals = await ServiceManual.find({ uploaded_by_user_id: req.user!.user_id }).lean();
+      const found = allManuals.find(m => {
+        const idNum = parseInt(m._id.toString().slice(-8), 16);
+        return idNum === parseInt(manualId, 10);
+      });
+      if (found) {
+        manual = await ServiceManual.findOne({ 
+          _id: found._id,
+          uploaded_by_user_id: req.user!.user_id 
+        });
+      }
+    }
 
     if (!manual) {
       return res.status(404).json({ error: 'Service manual not found' });
     }
 
+    await ServiceManual.findByIdAndDelete(manual._id);
     return res.json({ success: true });
   } catch (error) {
     console.error('Delete service manual error:', error);

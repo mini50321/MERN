@@ -48,8 +48,8 @@ export default function CreateCourseModal({
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 500 * 1024 * 1024) {
-        alert("Video file size must be less than 500MB");
+      if (file.size > 20 * 1024 * 1024) {
+        alert("Video file size must be less than 20MB. Please compress your video or use a smaller file.");
         return;
       }
       setVideoFile(file);
@@ -101,6 +101,7 @@ export default function CreateCourseModal({
 
       const videoRes = await fetch("/api/courses/upload-video", {
         method: "POST",
+        credentials: "include",
         body: videoFormData,
       });
 
@@ -153,6 +154,7 @@ export default function CreateCourseModal({
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           ...formData,
           video_url: videoData.video_url,
@@ -165,14 +167,18 @@ export default function CreateCourseModal({
       });
 
       if (!courseRes.ok) {
-        throw new Error("Failed to submit course");
+        const errorData = await courseRes.json().catch(() => ({}));
+        const errorMessage = errorData.details || errorData.error || "Failed to submit course";
+        console.error("Course submission error:", errorData);
+        throw new Error(errorMessage);
       }
 
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Error submitting course:", error);
-      alert("Failed to submit course. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to submit course. Please try again.";
+      alert(errorMessage);
     } finally {
       setIsUploading(false);
       setUploadProgress("");
@@ -437,7 +443,7 @@ export default function CreateCourseModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Course Video * (Max 500MB)
+                  Course Video * (Max 20MB)
                 </label>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">

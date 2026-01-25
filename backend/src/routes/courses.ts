@@ -1,38 +1,74 @@
 import express, { type Request, type Response } from 'express';
+import multer from 'multer';
+import { Course } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
+router.get('/test-model', async (_req: Request, res: Response) => {
+  try {
+    const courseCount = await Course.countDocuments();
+    return res.json({ 
+      success: true, 
+      message: 'Course model is working',
+      count: courseCount 
+    });
+  } catch (error: any) {
+    return res.status(500).json({ 
+      success: false, 
+      error: error?.message || 'Course model error',
+      stack: error?.stack 
+    });
+  }
+});
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 20 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed'));
+    }
+  }
+});
+
 router.get('/', async (req: Request, res: Response) => {
   try {
     const category = req.query.category as string | undefined;
+    const query: any = { is_active: true };
+    
+    if (category && category !== 'All') {
+      query.category = category;
+    }
 
-    const baseCourses = [
-      {
-        id: 1,
-        title: 'Introduction to Biomedical Equipment Maintenance',
-        description: 'Learn the fundamentals of maintaining biomedical equipment in hospitals and clinics.',
-        duration_hours: 3,
-        modules_count: 5,
-        category: 'Equipment Maintenance',
-        thumbnail_gradient: 'from-blue-500 to-cyan-500',
-        image_url: '',
-        average_rating: 4.8,
-        total_reviews: 12,
-        total_enrollments: 45,
-        instructor_name: 'Mavy Instructor',
-        price: 0,
-        currency: 'INR',
-        equipment_name: 'General Biomedical Equipment',
-        equipment_model: ''
-      }
-    ];
+    const courses = await Course.find(query)
+      .sort({ created_at: -1 })
+      .lean();
+    
+    const formattedCourses = courses.map(course => ({
+      id: course._id.toString(),
+      title: course.title,
+      description: course.description,
+      duration_hours: course.duration_hours,
+      modules_count: course.modules_count,
+      category: course.category,
+      thumbnail_gradient: 'from-blue-500 to-cyan-500',
+      image_url: course.image_url || course.thumbnail_url || '',
+      average_rating: course.average_rating,
+      total_reviews: course.total_reviews,
+      total_enrollments: course.total_enrollments,
+      instructor_name: course.instructor_name,
+      price: course.price,
+      currency: course.currency,
+      equipment_name: course.equipment_name || '',
+      equipment_model: course.equipment_model || ''
+    }));
 
-    const courses = category && category !== 'All'
-      ? baseCourses.filter(c => c.category === category)
-      : baseCourses;
-
-    return res.json(courses);
+    return res.json(formattedCourses);
   } catch (error) {
     console.error('Get courses error:', error);
     return res.status(500).json({ error: 'Failed to fetch courses' });
@@ -191,24 +227,169 @@ router.post('/:courseId/certificate', authMiddleware, async (req: AuthRequest, r
   }
 });
 
-router.post('/upload-video', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.post('/upload-video', authMiddleware, upload.single('video'), async (req: AuthRequest, res: Response) => {
   try {
-    return res.json({
-      success: true,
-      video_url: ''
-    });
-  } catch (error) {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file provided' });
+    }
+
+    const file = req.file;
+    
+    if (!file.mimetype.startsWith('video/')) {
+      return res.status(400).json({ error: 'File must be a video' });
+    }
+
+    try {
+      const maxSize = 20 * 1024 * 1024;
+      if (file.size > maxSize) {
+        return res.status(413).json({ 
+          error: `Video file is too large. Maximum size is ${maxSize / (1024 * 1024)}MB. Please compress your video or use a smaller file.` 
+        });
+      }
+
+      let base64Video: string;
+      try {
+        const chunkSize = 1024 * 1024;
+        const chunks: string[] = [];
+        
+        for (let i = 0; i < file.buffer.length; i += chunkSize) {
+          const chunk = file.buffer.slice(i, i + chunkSize);
+          chunks.push(chunk.toString('base64'));
+        }
+        
+        base64Video = `data:${file.mimetype};base64,${chunks.join('')}`;
+      } catch (bufferError: any) {
+        console.error('Error converting video to base64:', bufferError);
+        if (bufferError.message?.includes('offset') || bufferError.message?.includes('RangeError')) {
+          return res.status(413).json({ 
+            error: 'Video file is too large to process. Please use a video file smaller than 20MB, or compress your video file.' 
+          });
+        }
+        throw bufferError;
+      }
+
+      return res.json({
+        success: true,
+        video_url: base64Video,
+        message: 'Video uploaded successfully'
+      });
+    } catch (bufferError: any) {
+      console.error('Error processing video:', bufferError);
+      return res.status(500).json({ 
+        error: 'Failed to process video',
+        details: bufferError?.message || 'Unknown error'
+      });
+    }
+  } catch (error: any) {
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'Video file is too large. Maximum size is 20MB.' });
+      }
+      return res.status(400).json({ error: error.message });
+    }
     console.error('Upload course video error:', error);
     return res.status(500).json({ error: 'Failed to upload video' });
   }
 });
 
-router.post('/submit', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.post('/submit', authMiddleware, async (req: AuthRequest, res: Response) => {
+  console.log('=== /submit route hit ===');
+  console.log('Course model:', Course ? 'Available' : 'NOT AVAILABLE');
+  
   try {
-    return res.status(201).json({ success: true, course_id: 1 });
-  } catch (error) {
-    console.error('Submit course error:', error);
-    return res.status(500).json({ error: 'Failed to submit course' });
+    const body = req.body;
+    
+    console.log('=== Course Submission Started ===');
+    console.log('Course model available:', !!Course);
+    console.log('User ID:', req.user?.user_id);
+    console.log('Request body keys:', Object.keys(body || {}));
+    
+    if (!body || typeof body !== 'object') {
+      console.log('Invalid request body');
+      return res.status(400).json({ error: 'Invalid request body' });
+    }
+    
+    if (!body.title || !body.description || !body.category || !body.video_url) {
+      return res.status(400).json({ 
+        error: 'Title, description, category, and video are required',
+        received: {
+          title: !!body.title,
+          description: !!body.description,
+          category: !!body.category,
+          video_url: !!body.video_url
+        }
+      });
+    }
+    
+    console.log('All required fields present, creating course...');
+
+    const durationHours = body.duration_hours !== null && body.duration_hours !== undefined 
+      ? (typeof body.duration_hours === 'number' ? body.duration_hours : parseFloat(String(body.duration_hours)) || 0)
+      : 0;
+    
+    const modulesCount = body.modules_count !== null && body.modules_count !== undefined
+      ? (typeof body.modules_count === 'number' ? body.modules_count : parseInt(String(body.modules_count), 10) || 0)
+      : 0;
+    
+    const price = body.price !== null && body.price !== undefined
+      ? (typeof body.price === 'number' ? body.price : parseFloat(String(body.price)) || 0)
+      : 0;
+
+    const course = await Course.create({
+      title: String(body.title),
+      description: String(body.description),
+      category: String(body.category),
+      video_url: String(body.video_url),
+      image_url: body.image_url || null,
+      thumbnail_url: body.image_url || null,
+      instructor_name: body.instructor_name ? String(body.instructor_name) : 'Instructor',
+      instructor_bio: body.instructor_bio ? String(body.instructor_bio) : null,
+      instructor_image_url: body.instructor_image_url || null,
+      instructor_credentials: body.instructor_credentials ? String(body.instructor_credentials) : null,
+      learning_objectives: body.learning_objectives ? String(body.learning_objectives) : null,
+      prerequisites: body.prerequisites ? String(body.prerequisites) : null,
+      course_outline: body.course_outline ? String(body.course_outline) : (body.content ? String(body.content) : null),
+      duration_hours: durationHours,
+      modules_count: modulesCount,
+      price: price,
+      currency: body.currency ? String(body.currency) : 'INR',
+      equipment_name: body.equipment_name ? String(body.equipment_name) : null,
+      equipment_model: body.equipment_model ? String(body.equipment_model) : null,
+      content: body.content ? String(body.content) : null,
+      submitted_by_user_id: req.user!.user_id,
+      status: 'approved',
+      is_active: true,
+      average_rating: 0,
+      total_reviews: 0,
+      total_enrollments: 0
+    });
+
+    console.log('Course created successfully:', course._id.toString());
+    return res.status(201).json({ success: true, course_id: course._id.toString() });
+  } catch (error: any) {
+    console.error('=== Course Submission Error ===');
+    console.error('Error type:', error?.constructor?.name);
+    console.error('Error name:', error?.name);
+    console.error('Error message:', error?.message);
+    console.error('Error stack:', error?.stack);
+    
+    if (error?.name === 'ValidationError') {
+      const validationErrors = Object.keys(error.errors || {}).map(key => ({
+        field: key,
+        message: error.errors[key]?.message
+      }));
+      console.error('Validation errors:', validationErrors);
+      return res.status(400).json({ 
+        error: 'Validation error',
+        details: validationErrors
+      });
+    }
+    
+    return res.status(500).json({ 
+      error: 'Failed to submit course',
+      details: error?.message || 'Unknown error',
+      errorType: error?.name || 'Unknown'
+    });
   }
 });
 

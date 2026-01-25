@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@getmocha/users-service/react";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import {
@@ -17,6 +17,9 @@ import {
 import type { Job } from "@/shared/types";
 import JobApplicationModal from "@/react-app/components/JobApplicationModal";
 import CreateJobModal from "@/react-app/components/CreateJobModal";
+import EditJobModal from "@/react-app/components/EditJobModal";
+import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
+import { MoreHorizontal, Code, Flag } from "lucide-react";
 
 /* =========================
    Constants
@@ -40,6 +43,12 @@ export default function Jobs() {
   const [applyingId, setApplyingId] = useState<number | null>(null);
   const [applied, setApplied] = useState<Set<number>>(new Set());
   const [countryFilter, setCountryFilter] = useState("");
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showMenuForJob, setShowMenuForJob] = useState<number | null>(null);
+  const menuRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   /* =========================
      Effects
@@ -49,8 +58,40 @@ export default function Jobs() {
   }, [type, countryFilter]);
 
   useEffect(() => {
-    if (user) checkResume();
+    if (user) {
+      checkResume();
+      fetchUserProfile();
+    }
   }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMenuForJob !== null) {
+        const menuElement = menuRefs.current[showMenuForJob];
+        if (menuElement && !menuElement.contains(event.target as Node)) {
+          setShowMenuForJob(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenuForJob]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const res = await fetch("/api/users/me", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const userId = data.profile?.user_id || data.user_id || (user as any).user_id || (user as any).id;
+        setCurrentUserId(userId);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
 
   /* =========================
      Data
@@ -62,7 +103,9 @@ export default function Jobs() {
       if (type && type !== "All") params.append("type", type);
       if (countryFilter) params.append("country", countryFilter);
 
-      const res = await fetch(`/api/jobs?${params.toString()}`);
+      const res = await fetch(`/api/jobs?${params.toString()}`, {
+        credentials: "include"
+      });
       const data = await res.json();
       setJobs(Array.isArray(data) ? data : []);
     } catch {
@@ -91,6 +134,7 @@ export default function Jobs() {
     try {
       const res = await fetch(`/api/jobs/${selectedJob.id}/apply`, {
         method: "POST",
+        credentials: "include"
       });
       if (!res.ok) throw new Error();
       setApplied(new Set([...applied, selectedJob.id]));
@@ -100,6 +144,38 @@ export default function Jobs() {
     } finally {
       setApplyingId(null);
     }
+  };
+
+  const handleEdit = (job: Job) => {
+    setEditingJob(job);
+    setShowMenuForJob(null);
+  };
+
+  const handleDelete = async (jobId: number) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/jobs/${jobId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setJobs(jobs.filter(j => j.id !== jobId));
+        setDeletingJobId(null);
+      } else {
+        alert("Failed to delete job");
+      }
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      alert("Failed to delete job");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    fetchJobs();
+    setEditingJob(null);
   };
 
   /* =========================
@@ -171,8 +247,10 @@ export default function Jobs() {
           </div>
         ) : (
           <div className="space-y-4">
-            {jobs.map((job: any) => (
-              <div key={job.id} className="bg-white p-4 sm:p-6 rounded-2xl shadow hover:shadow-lg transition-shadow">
+            {jobs.map((job: any) => {
+              const isOwner = currentUserId && job.posted_by_user_id && String(currentUserId) === String(job.posted_by_user_id);
+              return (
+              <div key={job.id} className="bg-white p-4 sm:p-6 rounded-2xl shadow hover:shadow-lg transition-shadow relative">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg sm:text-xl font-bold break-words text-gray-900">{job.title}</h3>
@@ -183,7 +261,8 @@ export default function Jobs() {
                       </p>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap gap-2">
                     {job.job_type && (
                       <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
                         <Briefcase className="w-3 h-3" />
@@ -200,6 +279,38 @@ export default function Jobs() {
                         <Users className="w-3 h-3" />
                         {job.number_of_openings} openings
                       </span>
+                    )}
+                    </div>
+                    {isOwner && (
+                      <div className="relative" ref={(el) => { menuRefs.current[job.id] = el; }}>
+                        <button
+                          onClick={() => setShowMenuForJob(showMenuForJob === job.id ? null : job.id)}
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                          <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                        </button>
+                        {showMenuForJob === job.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                            <button
+                              onClick={() => handleEdit(job)}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                            >
+                              <Code className="w-5 h-5" />
+                              <span className="text-sm font-medium">Edit Job</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDeletingJobId(job.id);
+                                setShowMenuForJob(null);
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                            >
+                              <Flag className="w-5 h-5" />
+                              <span className="text-sm font-medium">Delete Job</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -279,7 +390,8 @@ export default function Jobs() {
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
@@ -302,6 +414,35 @@ export default function Jobs() {
         jobTitle={selectedJob?.title || ""}
         hasResume={hasResume}
         isApplying={applyingId === selectedJob?.id}
+      />
+
+      {/* Edit Job Modal */}
+      {editingJob && (
+        <EditJobModal
+          job={editingJob}
+          isOpen={!!editingJob}
+          onClose={() => setEditingJob(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deletingJobId !== null}
+        onClose={() => {
+          if (!isDeleting) {
+            setDeletingJobId(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (deletingJobId) {
+            await handleDelete(deletingJobId);
+          }
+        }}
+        title="Delete Job"
+        message="Are you sure you want to delete this job posting? This action cannot be undone."
+        itemName={jobs.find(j => j.id === deletingJobId)?.title}
+        isDeleting={isDeleting}
       />
     </DashboardLayout>
   );

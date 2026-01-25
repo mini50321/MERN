@@ -70,14 +70,35 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const job = await Job.findOneAndUpdate(
-      { 
-        _id: req.params.id,
-        posted_by_user_id: req.user!.user_id 
-      },
-      { $set: req.body },
-      { new: true }
-    );
+    const jobId = req.params.id;
+    let job;
+    
+    if (jobId.match(/^[0-9a-fA-F]{24}$/)) {
+      job = await Job.findOneAndUpdate(
+        { 
+          _id: jobId,
+          posted_by_user_id: req.user!.user_id 
+        },
+        { $set: req.body },
+        { new: true }
+      );
+    } else {
+      const allJobs = await Job.find({ posted_by_user_id: req.user!.user_id }).lean();
+      const found = allJobs.find(j => {
+        const idNum = parseInt(j._id.toString().slice(-8), 16);
+        return idNum === parseInt(jobId, 10);
+      });
+      if (found) {
+        job = await Job.findOneAndUpdate(
+          { 
+            _id: found._id,
+            posted_by_user_id: req.user!.user_id 
+          },
+          { $set: req.body },
+          { new: true }
+        );
+      }
+    }
 
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
@@ -92,15 +113,33 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const job = await Job.findOneAndDelete({ 
-      _id: req.params.id,
-      posted_by_user_id: req.user!.user_id 
-    });
+    const jobId = req.params.id;
+    let job;
+    
+    if (jobId.match(/^[0-9a-fA-F]{24}$/)) {
+      job = await Job.findOne({ 
+        _id: jobId,
+        posted_by_user_id: req.user!.user_id 
+      });
+    } else {
+      const allJobs = await Job.find({ posted_by_user_id: req.user!.user_id }).lean();
+      const found = allJobs.find(j => {
+        const idNum = parseInt(j._id.toString().slice(-8), 16);
+        return idNum === parseInt(jobId, 10);
+      });
+      if (found) {
+        job = await Job.findOne({ 
+          _id: found._id,
+          posted_by_user_id: req.user!.user_id 
+        });
+      }
+    }
 
     if (!job) {
       return res.status(404).json({ error: 'Job not found' });
     }
 
+    await Job.findByIdAndDelete(job._id);
     return res.json({ success: true });
   } catch (error) {
     console.error('Delete job error:', error);

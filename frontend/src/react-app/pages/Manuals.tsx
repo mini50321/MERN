@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@getmocha/users-service/react";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
-import { Search, Download, FileText, Upload, MessageSquare, Trash2, X, Plus } from "lucide-react";
+import { Search, Download, FileText, Upload, MessageSquare, Trash2, X, Plus, MoreHorizontal, Code, Flag } from "lucide-react";
+import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
+import EditServiceManualModal from "@/react-app/components/EditServiceManualModal";
 
 interface ServiceManual {
   id: number;
@@ -58,6 +60,12 @@ export default function Manuals() {
   const [selectedRequest, setSelectedRequest] = useState<ManualRequest | null>(null);
   const [requestReplies, setRequestReplies] = useState<ManualReply[]>([]);
   const [showRepliesModal, setShowRepliesModal] = useState(false);
+  const [editingManual, setEditingManual] = useState<ServiceManual | null>(null);
+  const [deletingManualId, setDeletingManualId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showMenuForManual, setShowMenuForManual] = useState<number | null>(null);
+  const menuRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const equipmentTypes = [
     "All",
@@ -71,7 +79,39 @@ export default function Manuals() {
 
   useEffect(() => {
     fetchData();
-  }, [searchQuery, selectedType, activeTab]);
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [searchQuery, selectedType, activeTab, user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMenuForManual !== null) {
+        const menuElement = menuRefs.current[showMenuForManual];
+        if (menuElement && !menuElement.contains(event.target as Node)) {
+          setShowMenuForManual(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenuForManual]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const res = await fetch("/api/users/me", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const userId = data.profile?.user_id || data.user_id || (user as any).user_id || (user as any).id;
+        setCurrentUserId(userId);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -163,19 +203,35 @@ export default function Manuals() {
   };
 
   const handleDeleteManual = async (manualId: number) => {
-    if (!confirm("Are you sure you want to delete this manual?")) return;
-
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/manuals/${manualId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (response.ok) {
-        fetchData();
+        setManuals(manuals.filter(m => m.id !== manualId));
+        setDeletingManualId(null);
+      } else {
+        alert("Failed to delete manual");
       }
     } catch (error) {
       console.error("Error deleting manual:", error);
+      alert("Failed to delete manual");
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handleEditManual = (manual: ServiceManual) => {
+    setEditingManual(manual);
+    setShowMenuForManual(null);
+  };
+
+  const handleEditSuccess = () => {
+    fetchData();
+    setEditingManual(null);
   };
 
   const handleDeleteRequest = async (requestId: number) => {
@@ -329,26 +385,51 @@ export default function Manuals() {
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {manuals.map((manual) => (
+              {manuals.map((manual) => {
+                const isOwner = currentUserId && manual.uploaded_by_user_id && String(currentUserId) === String(manual.uploaded_by_user_id);
+                return (
                 <div
                   key={manual.id}
                   className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative"
                 >
-                  {user?.id === manual.uploaded_by_user_id && (
-                    <button
-                      onClick={() => handleDeleteManual(manual.id)}
-                      className="absolute top-4 right-4 p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                      title="Delete manual"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {isOwner && (
+                    <div className="absolute top-4 right-4 z-10" ref={(el) => { menuRefs.current[manual.id] = el; }}>
+                      <button
+                        onClick={() => setShowMenuForManual(showMenuForManual === manual.id ? null : manual.id)}
+                        className="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors"
+                        title="Options"
+                      >
+                        <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                      </button>
+                      {showMenuForManual === manual.id && (
+                        <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                          <button
+                            onClick={() => handleEditManual(manual)}
+                            className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                          >
+                            <Code className="w-5 h-5" />
+                            <span className="text-sm font-medium">Edit Manual</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeletingManualId(manual.id);
+                              setShowMenuForManual(null);
+                            }}
+                            className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                          >
+                            <Flag className="w-5 h-5" />
+                            <span className="text-sm font-medium">Delete Manual</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                   
                   <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl mb-4 flex items-center justify-center">
                     <FileText className="w-16 h-16 text-blue-600" />
                   </div>
                   
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 pr-8">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
                     {manual.title}
                   </h3>
                   
@@ -391,7 +472,8 @@ export default function Manuals() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )
         ) : (
@@ -835,6 +917,35 @@ export default function Manuals() {
             </div>
           </div>
         )}
+
+        {/* Edit Manual Modal */}
+        {editingManual && (
+          <EditServiceManualModal
+            manual={editingManual}
+            isOpen={!!editingManual}
+            onClose={() => setEditingManual(null)}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmModal
+          isOpen={deletingManualId !== null}
+          onClose={() => {
+            if (!isDeleting) {
+              setDeletingManualId(null);
+            }
+          }}
+          onConfirm={async () => {
+            if (deletingManualId) {
+              await handleDeleteManual(deletingManualId);
+            }
+          }}
+          title="Delete Manual"
+          message="Are you sure you want to delete this manual? This action cannot be undone."
+          itemName={manuals.find(m => m.id === deletingManualId)?.title}
+          isDeleting={isDeleting}
+        />
       </div>
     </DashboardLayout>
   );

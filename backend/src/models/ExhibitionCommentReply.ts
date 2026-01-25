@@ -1,15 +1,15 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface INewsComment extends Document {
-  news_id: string;
+export interface IExhibitionCommentReply extends Document {
+  comment_id: string;
   user_id: string;
-  comment: string;
+  reply: string;
   created_at: Date;
   updated_at: Date;
 }
 
-const NewsCommentSchema = new Schema<INewsComment>({
-  news_id: {
+const ExhibitionCommentReplySchema = new Schema<IExhibitionCommentReply>({
+  comment_id: {
     type: String,
     required: true,
     index: true
@@ -19,7 +19,7 @@ const NewsCommentSchema = new Schema<INewsComment>({
     required: true,
     index: true
   },
-  comment: {
+  reply: {
     type: String,
     required: true
   },
@@ -33,11 +33,10 @@ const NewsCommentSchema = new Schema<INewsComment>({
   }
 });
 
-NewsCommentSchema.pre('save', function(next) {
+ExhibitionCommentReplySchema.pre('save', function(next) {
   this.updated_at = new Date();
   next();
 });
 
-export const NewsComment = mongoose.model<INewsComment>('NewsComment', NewsCommentSchema);
-
+export const ExhibitionCommentReply = mongoose.model<IExhibitionCommentReply>('ExhibitionCommentReply', ExhibitionCommentReplySchema);
 

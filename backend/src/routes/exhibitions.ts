@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import multer from 'multer';
-import { Exhibition } from '../models/index.js';
+import { Exhibition, ExhibitionComment, ExhibitionCommentReply, User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -258,9 +258,51 @@ router.post('/:id/report', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
-router.get('/:id/comments', async (_req: Request, res: Response) => {
+router.get('/:id/comments', async (req: Request, res: Response) => {
   try {
-    return res.json([]);
+    const exhibitionId = req.params.id;
+    
+    let exhibition;
+    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(exhibitionId).lean();
+    } else {
+      const allExhibitions = await Exhibition.find().lean();
+      exhibition = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(exhibitionId, 10);
+      });
+    }
+    
+    if (!exhibition) {
+      return res.json([]);
+    }
+    
+    const actualExhibitionId = (exhibition as any)._id.toString();
+    const comments = await ExhibitionComment.find({ exhibition_id: actualExhibitionId })
+      .sort({ created_at: -1 })
+      .lean();
+
+    const commentsWithUser = await Promise.all(comments.map(async (comment) => {
+      const user = await User.findOne({ user_id: comment.user_id }).lean();
+      const replyCount = await ExhibitionCommentReply.countDocuments({ comment_id: comment._id.toString() });
+      const commentIdNum = parseInt(comment._id.toString().slice(-8), 16) || Date.now();
+      
+      return {
+        id: commentIdNum,
+        exhibition_id: parseInt(exhibitionId) || 0,
+        user_id: comment.user_id,
+        comment: comment.comment,
+        full_name: (user as any)?.profile?.full_name || 'User',
+        profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
+        created_at: comment.created_at.toISOString(),
+        updated_at: comment.updated_at.toISOString(),
+        likes_count: 0,
+        replies_count: replyCount || 0,
+        user_liked: false
+      };
+    }));
+
+    return res.json(commentsWithUser);
   } catch (error) {
     console.error('Get exhibition comments error:', error);
     return res.status(500).json({ error: 'Failed to fetch comments' });
@@ -269,11 +311,54 @@ router.get('/:id/comments', async (_req: Request, res: Response) => {
 
 router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const exhibition = await Exhibition.findById(req.params.id);
+    const exhibitionId = req.params.id;
+    
+    let exhibition;
+    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(exhibitionId);
+    } else {
+      const allExhibitions = await Exhibition.find().lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(exhibitionId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findById(found._id);
+      }
+    }
+    
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
     }
-    return res.json({ success: true, message: 'Comment posted' });
+
+    const actualExhibitionId = exhibition._id.toString();
+    const user = await User.findOne({ user_id: req.user!.user_id }).lean();
+    
+    const savedComment = await ExhibitionComment.create({
+      exhibition_id: actualExhibitionId,
+      user_id: req.user!.user_id,
+      comment: req.body.comment
+    });
+
+    const comment = {
+      id: parseInt(savedComment._id.toString().slice(-8), 16) || Date.now(),
+      exhibition_id: parseInt(exhibitionId) || 0,
+      user_id: req.user!.user_id,
+      comment: savedComment.comment,
+      full_name: (user as any)?.profile?.full_name || 'User',
+      profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
+      created_at: savedComment.created_at.toISOString(),
+      updated_at: savedComment.updated_at.toISOString(),
+      likes_count: 0,
+      replies_count: 0,
+      user_liked: false
+    };
+
+    return res.status(201).json({ 
+      success: true, 
+      message: 'Comment posted successfully',
+      comment: comment
+    });
   } catch (error) {
     console.error('Comment exhibition error:', error);
     return res.status(500).json({ error: 'Failed to post comment' });
@@ -289,18 +374,89 @@ router.post('/comments/:id/like', authMiddleware, async (_req: AuthRequest, res:
   }
 });
 
-router.get('/comments/:id/replies', async (_req: Request, res: Response) => {
+router.get('/comments/:id/replies', async (req: Request, res: Response) => {
   try {
-    return res.json([]);
+    const numericCommentId = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
+    
+    const allComments = await ExhibitionComment.find().lean();
+    const matchingComment = allComments.find(c => {
+      const commentIdNum = parseInt(c._id.toString().slice(-8), 16);
+      return commentIdNum === numericCommentId;
+    });
+    
+    if (!matchingComment) {
+      return res.json([]);
+    }
+    
+    const replies = await ExhibitionCommentReply.find({ comment_id: matchingComment._id.toString() })
+      .sort({ created_at: 1 })
+      .lean();
+
+    const repliesWithUser = await Promise.all(replies.map(async (reply) => {
+      const user = await User.findOne({ user_id: reply.user_id }).lean();
+      
+      return {
+        id: parseInt(reply._id.toString().slice(-8), 16) || Date.now(),
+        comment_id: numericCommentId,
+        user_id: reply.user_id,
+        reply: reply.reply,
+        full_name: (user as any)?.profile?.full_name || 'User',
+        profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
+        created_at: reply.created_at.toISOString(),
+        updated_at: reply.updated_at.toISOString()
+      };
+    }));
+
+    return res.json(repliesWithUser);
   } catch (error) {
     console.error('Get comment replies error:', error);
     return res.status(500).json({ error: 'Failed to fetch replies' });
   }
 });
 
-router.post('/comments/:id/reply', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.post('/comments/:id/reply', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    return res.json({ success: true, message: 'Reply posted' });
+    const { reply } = req.body;
+    
+    if (!reply || !reply.trim()) {
+      return res.status(400).json({ error: 'Reply text is required' });
+    }
+
+    const numericCommentId = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
+    const allComments = await ExhibitionComment.find().lean();
+    const matchingComment = allComments.find(c => {
+      const commentIdNum = parseInt(c._id.toString().slice(-8), 16);
+      return commentIdNum === numericCommentId;
+    });
+    
+    if (!matchingComment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const user = await User.findOne({ user_id: req.user!.user_id }).lean();
+    
+    const savedReply = await ExhibitionCommentReply.create({
+      comment_id: matchingComment._id.toString(),
+      user_id: req.user!.user_id,
+      reply: reply.trim()
+    });
+
+    const replyObj = {
+      id: parseInt(savedReply._id.toString().slice(-8), 16) || Date.now(),
+      comment_id: numericCommentId,
+      user_id: req.user!.user_id,
+      reply: savedReply.reply,
+      full_name: (user as any)?.profile?.full_name || 'User',
+      profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
+      created_at: savedReply.created_at.toISOString(),
+      updated_at: savedReply.updated_at.toISOString()
+    };
+
+    return res.status(201).json({ 
+      success: true, 
+      message: 'Reply posted successfully',
+      reply: replyObj
+    });
   } catch (error) {
     console.error('Reply comment error:', error);
     return res.status(500).json({ error: 'Failed to post reply' });

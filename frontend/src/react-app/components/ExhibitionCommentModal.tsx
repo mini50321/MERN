@@ -16,6 +16,7 @@ export default function ExhibitionCommentModal({ exhibitionId, exhibitionTitle, 
   const [newComment, setNewComment] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingReply, setSubmittingReply] = useState<number | null>(null);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
   const [expandedReplies, setExpandedReplies] = useState<Set<number>>(new Set());
@@ -30,11 +31,18 @@ export default function ExhibitionCommentModal({ exhibitionId, exhibitionTitle, 
   const fetchComments = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/exhibitions/${exhibitionId}/comments`);
-      const data = await response.json();
-      setComments(data);
+      const response = await fetch(`/api/exhibitions/${exhibitionId}/comments`, {
+        credentials: "include"
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setComments(Array.isArray(data) ? data : []);
+      } else {
+        setComments([]);
+      }
     } catch (error) {
       console.error("Error fetching comments:", error);
+      setComments([]);
     } finally {
       setIsLoading(false);
     }
@@ -42,9 +50,13 @@ export default function ExhibitionCommentModal({ exhibitionId, exhibitionTitle, 
 
   const fetchReplies = async (commentId: number) => {
     try {
-      const response = await fetch(`/api/exhibitions/comments/${commentId}/replies`);
-      const data = await response.json();
-      setReplies(prev => ({ ...prev, [commentId]: data }));
+      const response = await fetch(`/api/exhibitions/comments/${commentId}/replies`, {
+        credentials: "include"
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setReplies(prev => ({ ...prev, [commentId]: data }));
+      }
     } catch (error) {
       console.error("Error fetching replies:", error);
     }
@@ -54,20 +66,45 @@ export default function ExhibitionCommentModal({ exhibitionId, exhibitionTitle, 
     e.preventDefault();
     if (!newComment.trim() || !user) return;
 
+    const commentText = newComment.trim();
     setIsSubmitting(true);
+
+    const tempComment: ExhibitionCommentWithCounts = {
+      id: Date.now(),
+      exhibition_id: exhibitionId,
+      user_id: (user as any).user_id || (user as any).id || '',
+      comment: commentText,
+      full_name: (user as any).profile?.full_name || (user as any).full_name || 'You',
+      profile_picture_url: (user as any).profile?.profile_picture_url || (user as any).profile_picture_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      likes_count: 0,
+      replies_count: 0,
+      user_liked: false
+    };
+
+    setComments(prev => [tempComment, ...prev]);
+    setNewComment("");
+
     try {
       const response = await fetch(`/api/exhibitions/${exhibitionId}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ comment: newComment }),
+        credentials: "include",
+        body: JSON.stringify({ comment: commentText }),
       });
 
       if (response.ok) {
-        setNewComment("");
-        await fetchComments();
+        const data = await response.json();
+        setComments(prev => prev.map(c => c.id === tempComment.id ? data.comment : c));
+      } else {
+        setComments(prev => prev.filter(c => c.id !== tempComment.id));
+        alert("Failed to post comment.");
       }
     } catch (error) {
       console.error("Error posting comment:", error);
+      setComments(prev => prev.filter(c => c.id !== tempComment.id));
+      alert("Network error. Failed to post comment.");
     } finally {
       setIsSubmitting(false);
     }
@@ -79,35 +116,117 @@ export default function ExhibitionCommentModal({ exhibitionId, exhibitionTitle, 
       return;
     }
 
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    const newLikedState = !comment.user_liked;
+    
+    setComments(prev =>
+      prev.map(c =>
+        c.id === commentId
+          ? {
+              ...c,
+              user_liked: newLikedState,
+              likes_count: newLikedState ? c.likes_count + 1 : c.likes_count - 1,
+            }
+          : c
+      )
+    );
+
     try {
-      await fetch(`/api/exhibitions/comments/${commentId}/like`, {
+      const response = await fetch(`/api/exhibitions/comments/${commentId}/like`, {
         method: "POST",
+        credentials: "include"
       });
-      await fetchComments();
+      if (!response.ok) {
+        setComments(prev =>
+          prev.map(c =>
+            c.id === commentId
+              ? {
+                  ...c,
+                  user_liked: !newLikedState,
+                  likes_count: !newLikedState ? c.likes_count + 1 : c.likes_count - 1,
+                }
+              : c
+          )
+        );
+        alert("Failed to update like status.");
+      }
     } catch (error) {
       console.error("Error liking comment:", error);
+      setComments(prev =>
+        prev.map(c =>
+          c.id === commentId
+            ? {
+                ...c,
+                user_liked: !newLikedState,
+                likes_count: !newLikedState ? c.likes_count + 1 : c.likes_count - 1,
+              }
+            : c
+        )
+      );
+      alert("Network error. Failed to update like status.");
     }
   };
 
   const handleReply = async (commentId: number) => {
     if (!replyText.trim() || !user) return;
 
+    const replyTextValue = replyText.trim();
+    setSubmittingReply(commentId);
+
+    const tempReply: ExhibitionCommentReply = {
+      id: Date.now(),
+      comment_id: commentId,
+      user_id: (user as any).user_id || (user as any).id || '',
+      reply: replyTextValue,
+      full_name: (user as any).profile?.full_name || (user as any).full_name || 'You',
+      profile_picture_url: (user as any).profile?.profile_picture_url || (user as any).profile_picture_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    setReplies(prev => ({
+      ...prev,
+      [commentId]: [tempReply, ...(prev[commentId] || [])]
+    }));
+    setReplyText("");
+    setReplyingTo(null);
+    setExpandedReplies(prev => new Set(prev).add(commentId));
+
     try {
       const response = await fetch(`/api/exhibitions/comments/${commentId}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply: replyText }),
+        credentials: "include",
+        body: JSON.stringify({ reply: replyTextValue }),
       });
 
       if (response.ok) {
-        setReplyText("");
-        setReplyingTo(null);
-        await fetchComments();
-        await fetchReplies(commentId);
-        setExpandedReplies(prev => new Set(prev).add(commentId));
+        const data = await response.json();
+        setReplies(prev => ({
+          ...prev,
+          [commentId]: prev[commentId]?.map(r => r.id === tempReply.id ? data.reply : r) || []
+        }));
+        setComments(prev => prev.map(c =>
+          c.id === commentId ? { ...c, replies_count: c.replies_count + 1 } : c
+        ));
+      } else {
+        setReplies(prev => ({
+          ...prev,
+          [commentId]: prev[commentId]?.filter(r => r.id !== tempReply.id) || []
+        }));
+        alert("Failed to post reply.");
       }
     } catch (error) {
       console.error("Error posting reply:", error);
+      setReplies(prev => ({
+        ...prev,
+        [commentId]: prev[commentId]?.filter(r => r.id !== tempReply.id) || []
+      }));
+      alert("Network error. Failed to post reply.");
+    } finally {
+      setSubmittingReply(null);
     }
   };
 

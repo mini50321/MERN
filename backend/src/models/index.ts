@@ -26,3 +26,7 @@ export { NewsComment } from './NewsComment.js';
 export type { INewsComment } from './NewsComment.js';
 export { CommentReply } from './CommentReply.js';
 export type { ICommentReply } from './CommentReply.js';
+export { ExhibitionComment } from './ExhibitionComment.js';
+export type { IExhibitionComment } from './ExhibitionComment.js';
+export { ExhibitionCommentReply } from './ExhibitionCommentReply.js';
+export type { IExhibitionCommentReply } from './ExhibitionCommentReply.js';

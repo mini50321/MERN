@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import multer from 'multer';
-import { NewsUpdate } from '../models/index.js';
+import { NewsUpdate, NewsComment, User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -92,9 +92,37 @@ router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) =>
   }
 });
 
-router.get('/:id/comments', async (_req: Request, res: Response) => {
+router.get('/:id/comments', async (req: Request, res: Response) => {
   try {
-    return res.json([]);
+    const comments = await NewsComment.find({ news_id: req.params.id })
+      .sort({ created_at: -1 })
+      .lean();
+
+    const { CommentReply } = await import('../models/index.js');
+    
+    const newsIdNum = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
+    
+    const commentsWithUser = await Promise.all(comments.map(async (comment) => {
+      const user = await User.findOne({ user_id: comment.user_id }).lean();
+      const replyCount = await CommentReply.countDocuments({ comment_id: comment._id.toString() });
+      const commentIdNum = parseInt(comment._id.toString().slice(-8), 16) || Date.now();
+      
+      return {
+        id: commentIdNum,
+        news_id: isNaN(newsIdNum) ? 0 : newsIdNum,
+        user_id: comment.user_id,
+        comment: comment.comment,
+        full_name: (user as any)?.profile?.full_name || 'User',
+        profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
+        created_at: comment.created_at.toISOString(),
+        updated_at: comment.updated_at.toISOString(),
+        likes_count: 0,
+        replies_count: replyCount || 0,
+        user_liked: false
+      };
+    }));
+
+    return res.json(commentsWithUser);
   } catch (error) {
     console.error('Get news comments error:', error);
     return res.status(500).json({ error: 'Failed to fetch comments' });
@@ -109,20 +137,28 @@ router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Respon
       return res.status(404).json({ error: 'News not found' });
     }
 
-    const { User } = await import('../models/index.js');
+    if (!req.body.comment || !req.body.comment.trim()) {
+      return res.status(400).json({ error: 'Comment text is required' });
+    }
+
+    const savedComment = await NewsComment.create({
+      news_id: req.params.id,
+      user_id: req.user!.user_id,
+      comment: req.body.comment.trim()
+    });
+
     const user = await User.findOne({ user_id: req.user!.user_id }).lean();
-    
-    const commentId = Date.now();
     const newsIdNum = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
+    
     const comment = {
-      id: commentId,
+      id: parseInt(savedComment._id.toString().slice(-8), 16) || Date.now(),
       news_id: isNaN(newsIdNum) ? 0 : newsIdNum,
       user_id: req.user!.user_id,
-      comment: req.body.comment,
+      comment: savedComment.comment,
       full_name: (user as any)?.profile?.full_name || 'User',
       profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: savedComment.created_at.toISOString(),
+      updated_at: savedComment.updated_at.toISOString(),
       likes_count: 0,
       replies_count: 0,
       user_liked: false

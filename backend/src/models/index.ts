@@ -22,3 +22,7 @@ export { Exhibition } from './Exhibition.js';
 export type { IExhibition } from './Exhibition.js';
 export { Service } from './Service.js';
 export type { IService } from './Service.js';
+export { NewsComment } from './NewsComment.js';
+export type { INewsComment } from './NewsComment.js';
+export { CommentReply } from './CommentReply.js';
+export type { ICommentReply } from './CommentReply.js';

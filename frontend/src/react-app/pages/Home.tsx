@@ -1,4 +1,5 @@
 import { useAuth } from "@getmocha/users-service/react";
+import { useNavigate } from "react-router";
 import { 
   Briefcase, 
   Network, 
@@ -316,6 +317,7 @@ import MobileLoginModal from "@/react-app/components/MobileLoginModal";
 
 export default function Home() {
   const { isPending, redirectToLogin } = useAuth();
+  const navigate = useNavigate();
   const [showMobileLogin, setShowMobileLogin] = useState(false);
   const [, setCurrentSlide] = useState(0);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
@@ -1735,7 +1737,7 @@ export default function Home() {
         onClose={() => setShowMobileLogin(false)}
         onSuccess={() => {
           setShowMobileLogin(false);
-          window.location.reload();
+          navigate("/dashboard");
         }}
       />
     </div>

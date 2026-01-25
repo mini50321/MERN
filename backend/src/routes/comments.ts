@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
-import { CommentReply, User, NewsComment } from '../models/index.js';
+import { CommentReply, User } from '../models/index.js';
 
 const router = express.Router();
 
@@ -15,9 +15,20 @@ router.post('/:id/like', authMiddleware, async (_req: AuthRequest, res: Response
 
 router.get('/:id/replies', async (req: Request, res: Response) => {
   try {
-    const commentId = req.params.id;
+    const numericCommentId = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
     
-    const replies = await CommentReply.find({ comment_id: commentId })
+    const { NewsComment } = await import('../models/index.js');
+    const allComments = await NewsComment.find().lean();
+    const matchingComment = allComments.find(c => {
+      const commentIdNum = parseInt(c._id.toString().slice(-8), 16);
+      return commentIdNum === numericCommentId;
+    });
+    
+    if (!matchingComment) {
+      return res.json([]);
+    }
+    
+    const replies = await CommentReply.find({ comment_id: matchingComment._id.toString() })
       .sort({ created_at: 1 })
       .lean();
 

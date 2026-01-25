@@ -181,7 +181,22 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
 
 router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const exhibition = await Exhibition.findById(req.params.id);
+    const exhibitionId = req.params.id;
+    let exhibition;
+    
+    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(exhibitionId);
+    } else {
+      const allExhibitions = await Exhibition.find().lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(exhibitionId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findById(found._id);
+      }
+    }
+    
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
     }
@@ -208,7 +223,22 @@ router.post('/:id/save', authMiddleware, async (req: AuthRequest, res: Response)
 router.post('/:id/response', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { response_type } = req.body;
-    const exhibition = await Exhibition.findById(req.params.id);
+    const exhibitionId = req.params.id;
+    let exhibition;
+    
+    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(exhibitionId);
+    } else {
+      const allExhibitions = await Exhibition.find().lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(exhibitionId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findById(found._id);
+      }
+    }
+    
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
     }

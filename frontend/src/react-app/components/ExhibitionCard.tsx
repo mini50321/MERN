@@ -137,11 +137,16 @@ export default function ExhibitionCard({
     }
 
     try {
-      await fetch(`/api/exhibitions/${exhibition.id}/response`, {
+      const response = await fetch(`/api/exhibitions/${exhibition.id}/response`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ response_type: responseType }),
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update response');
+      }
       
       if (onResponseChange) {
         onResponseChange();

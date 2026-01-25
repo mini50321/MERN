@@ -73,10 +73,16 @@ export default function Exhibitions() {
     }
 
     try {
-      await fetch(`/api/exhibitions/${exhibitionId}/like`, {
+      const response = await fetch(`/api/exhibitions/${exhibitionId}/like`, {
         method: "POST",
+        credentials: "include",
       });
-      fetchExhibitions();
+      
+      if (response.ok) {
+        fetchExhibitions();
+      } else {
+        alert("Failed to like exhibition. Please try again.");
+      }
     } catch (error) {
       console.error("Error liking exhibition:", error);
     }

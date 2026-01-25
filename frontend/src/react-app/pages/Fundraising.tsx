@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@getmocha/users-service/react";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
-import { Search, Plus, Heart, Calendar, User } from "lucide-react";
+import { Search, Plus, Heart, Calendar, User, MoreHorizontal, Code, Flag } from "lucide-react";
 import CreateFundraiserModal from "@/react-app/components/CreateFundraiserModal";
+import EditFundraiserModal from "@/react-app/components/EditFundraiserModal";
+import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
+import { useRef } from "react";
 
-/* =========================
-   Types
-========================= */
+
 interface Fundraiser {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
   category: string;
@@ -21,11 +22,17 @@ interface Fundraiser {
   end_date: string | null;
   donations_count: number;
   progress_percentage: number;
+  created_by_user_id?: string;
+  status?: string;
+  beneficiary_contact?: string | null;
+  documents?: Array<{
+    document_type: string;
+    file_url: string;
+    file_name: string;
+  }>;
 }
 
-/* =========================
-   Constants
-========================= */
+
 const CATEGORIES = [
   "Medical Emergency",
   "Disability Support",
@@ -43,9 +50,7 @@ const CASE_TYPES = [
   "Other",
 ];
 
-/* =========================
-   Component
-========================= */
+
 export default function Fundraising() {
   const { user } = useAuth();
 
@@ -55,10 +60,14 @@ export default function Fundraising() {
   const [category, setCategory] = useState("");
   const [caseType, setCaseType] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [editingFundraiser, setEditingFundraiser] = useState<Fundraiser | null>(null);
+  const [deletingFundraiserId, setDeletingFundraiserId] = useState<number | string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showMenuForFundraiser, setShowMenuForFundraiser] = useState<number | string | null>(null);
+  const menuRefs = useRef<Record<number | string, HTMLDivElement | null>>({});
 
-  /* =========================
-     Data Fetch
-  ========================= */
+ 
   const fetchFundraisers = async () => {
     try {
       setLoading(true);
@@ -79,11 +88,41 @@ export default function Fundraising() {
 
   useEffect(() => {
     fetchFundraisers();
-  }, [category, caseType]);
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [category, caseType, user]);
 
-  /* =========================
-     Derived State
-  ========================= */
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const res = await fetch("/api/users/me", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const userId = data.profile?.user_id || data.user_id || (user as any)?.user_id || (user as any)?.id;
+        setCurrentUserId(userId);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMenuForFundraiser !== null) {
+        const menuElement = menuRefs.current[showMenuForFundraiser];
+        if (menuElement && !menuElement.contains(event.target as Node)) {
+          setShowMenuForFundraiser(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenuForFundraiser]);
+
+ 
   const filteredFundraisers = useMemo(() => {
     const q = search.toLowerCase();
     return fundraisers.filter(
@@ -94,10 +133,8 @@ export default function Fundraising() {
     );
   }, [fundraisers, search]);
 
-  /* =========================
-     Donate
-  ========================= */
-  const handleDonate = async (id: number) => {
+
+  const handleDonate = async (id: number | string) => {
     if (!user) {
       alert("Please sign in to donate");
       return;
@@ -112,6 +149,7 @@ export default function Fundraising() {
       const res = await fetch(`/api/fundraisers/${id}/donate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ amount: value, currency: "USD" }),
       });
 
@@ -121,6 +159,39 @@ export default function Fundraising() {
     } catch {
       alert("Donation failed. Please try again.");
     }
+  };
+
+  const handleEdit = (fundraiser: Fundraiser) => {
+    setEditingFundraiser(fundraiser);
+    setShowMenuForFundraiser(null);
+  };
+
+  const handleDelete = async (fundraiserId: number | string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/fundraisers/${fundraiserId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setFundraisers(fundraisers.filter(f => f.id !== fundraiserId));
+        setDeletingFundraiserId(null);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to delete fundraiser");
+      }
+    } catch (error) {
+      console.error("Error deleting fundraiser:", error);
+      alert("Failed to delete fundraiser");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    fetchFundraisers();
+    setEditingFundraiser(null);
   };
 
   /* =========================
@@ -193,17 +264,85 @@ export default function Fundraising() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredFundraisers.map((f) => (
+            {filteredFundraisers.map((f) => {
+              const isOwner = currentUserId && f.created_by_user_id && String(currentUserId) === String(f.created_by_user_id);
+              return (
               <div
                 key={f.id}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden"
+                className="bg-white rounded-2xl shadow-lg overflow-hidden relative"
               >
                 {f.image_url && (
-                  <img
-                    src={f.image_url}
-                    alt={f.title}
-                    className="w-full h-48 object-cover"
-                  />
+                  <div className="relative">
+                    <img
+                      src={f.image_url}
+                      alt={f.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    {isOwner && (
+                      <div className="absolute top-3 right-3 z-10" ref={(el) => { menuRefs.current[f.id] = el; }}>
+                        <button
+                          onClick={() => setShowMenuForFundraiser(showMenuForFundraiser === f.id ? null : f.id)}
+                          className="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors"
+                          title="Options"
+                        >
+                          <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                        </button>
+                        {showMenuForFundraiser === f.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                            <button
+                              onClick={() => handleEdit(f)}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                            >
+                              <Code className="w-5 h-5" />
+                              <span className="text-sm font-medium">Edit Fundraiser</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDeletingFundraiserId(f.id);
+                                setShowMenuForFundraiser(null);
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                            >
+                              <Flag className="w-5 h-5" />
+                              <span className="text-sm font-medium">Delete Fundraiser</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!f.image_url && isOwner && (
+                  <div className="absolute top-3 right-3 z-10" ref={(el) => { menuRefs.current[f.id] = el; }}>
+                    <button
+                      onClick={() => setShowMenuForFundraiser(showMenuForFundraiser === f.id ? null : f.id)}
+                      className="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors"
+                      title="Options"
+                    >
+                      <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                    </button>
+                    {showMenuForFundraiser === f.id && (
+                      <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                        <button
+                          onClick={() => handleEdit(f)}
+                          className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                        >
+                          <Code className="w-5 h-5" />
+                          <span className="text-sm font-medium">Edit Fundraiser</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setDeletingFundraiserId(f.id);
+                            setShowMenuForFundraiser(null);
+                          }}
+                          className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                        >
+                          <Flag className="w-5 h-5" />
+                          <span className="text-sm font-medium">Delete Fundraiser</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 <div className="p-6">
@@ -260,7 +399,8 @@ export default function Fundraising() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -274,6 +414,33 @@ export default function Fundraising() {
           }}
         />
       )}
+
+      {editingFundraiser && (
+        <EditFundraiserModal
+          fundraiser={editingFundraiser}
+          isOpen={!!editingFundraiser}
+          onClose={() => setEditingFundraiser(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+
+      <DeleteConfirmModal
+        isOpen={deletingFundraiserId !== null}
+        onClose={() => {
+          if (!isDeleting) {
+            setDeletingFundraiserId(null);
+          }
+        }}
+        onConfirm={async () => {
+          if (deletingFundraiserId) {
+            await handleDelete(deletingFundraiserId);
+          }
+        }}
+        title="Delete Fundraiser"
+        message="Are you sure you want to delete this fundraiser? This action cannot be undone."
+        itemName={fundraisers.find(f => f.id === deletingFundraiserId)?.title}
+        isDeleting={isDeleting}
+      />
     </DashboardLayout>
   );
 }

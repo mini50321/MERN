@@ -2,16 +2,21 @@ import { useState } from "react";
 import { X, Save, User, DollarSign, Calendar } from "lucide-react";
 
 interface Fundraiser {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
   category: string;
   case_type: string;
   goal_amount: number;
   beneficiary_name: string;
-  beneficiary_contact: string | null;
-  end_date: string | null;
-  image_url: string | null;
+  beneficiary_contact?: string | null;
+  end_date?: string | null;
+  image_url?: string | null;
+  documents?: Array<{
+    document_type: string;
+    file_url: string;
+    file_name: string;
+  }>;
 }
 
 interface EditFundraiserModalProps {
@@ -77,9 +82,10 @@ export default function EditFundraiserModal({ fundraiser, isOpen, onClose, onSuc
     setError("");
 
     try {
-      const response = await fetch(`/api/admin/fundraisers/${fundraiser.id}`, {
+      const response = await fetch(`/api/fundraisers/${fundraiser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           ...formData,
           goal_amount: parseFloat(formData.goal_amount),

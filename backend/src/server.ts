@@ -30,6 +30,7 @@ import coursesRoutes from './routes/courses.js';
 import lessonsRoutes from './routes/lessons.js';
 import fundraisersRoutes from './routes/fundraisers.js';
 import adminRoutes from './routes/admin.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 dotenv.config();
 
@@ -79,6 +80,7 @@ app.use('/api/lessons', lessonsRoutes);
 app.use('/api/fundraisers', fundraisersRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 
 const projectRoot = path.resolve(__dirname, '../..');

@@ -33,7 +33,8 @@ router.get('/', async (req: Request, res: Response) => {
     
     const formattedManuals = manuals.map(manual => ({
       ...manual,
-      id: manual._id.toString()
+      id: manual._id.toString(),
+      uploaded_by_user_id: manual.uploaded_by_user_id
     }));
     
     return res.json(formattedManuals);

@@ -6,7 +6,7 @@ import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import EditServiceManualModal from "@/react-app/components/EditServiceManualModal";
 
 interface ServiceManual {
-  id: number;
+  id: number | string;
   title: string;
   manufacturer: string | null;
   model_number: string | null;
@@ -61,11 +61,16 @@ export default function Manuals() {
   const [requestReplies, setRequestReplies] = useState<ManualReply[]>([]);
   const [showRepliesModal, setShowRepliesModal] = useState(false);
   const [editingManual, setEditingManual] = useState<ServiceManual | null>(null);
-  const [deletingManualId, setDeletingManualId] = useState<number | null>(null);
+  const [deletingManualId, setDeletingManualId] = useState<number | string | null>(null);
+  const [editingRequest, setEditingRequest] = useState<ManualRequest | null>(null);
+  const [deletingRequestId, setDeletingRequestId] = useState<number | string | null>(null);
+  const [isDeletingRequest, setIsDeletingRequest] = useState(false);
+  const [showMenuForRequest, setShowMenuForRequest] = useState<number | string | null>(null);
+  const requestMenuRefs = useRef<Record<number | string, HTMLDivElement | null>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [showMenuForManual, setShowMenuForManual] = useState<number | null>(null);
-  const menuRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [showMenuForManual, setShowMenuForManual] = useState<number | string | null>(null);
+  const menuRefs = useRef<Record<number | string, HTMLDivElement | null>>({});
 
   const equipmentTypes = [
     "All",
@@ -92,11 +97,17 @@ export default function Manuals() {
           setShowMenuForManual(null);
         }
       }
+      if (showMenuForRequest !== null) {
+        const menuElement = requestMenuRefs.current[showMenuForRequest];
+        if (menuElement && !menuElement.contains(event.target as Node)) {
+          setShowMenuForRequest(null);
+        }
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showMenuForManual]);
+  }, [showMenuForManual, showMenuForRequest]);
 
   const fetchUserProfile = async () => {
     if (!user) return;
@@ -107,6 +118,7 @@ export default function Manuals() {
         const data = await res.json();
         const userId = data.profile?.user_id || data.user_id || (user as any).user_id || (user as any).id;
         setCurrentUserId(userId);
+        console.log("Manuals - Current user ID:", userId);
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -160,9 +172,14 @@ export default function Manuals() {
     const formData = new FormData(e.currentTarget);
 
     try {
-      const response = await fetch("/api/manual-requests", {
-        method: "POST",
+      const isEditing = !!editingRequest;
+      const url = isEditing ? `/api/manual-requests/${editingRequest.id}` : "/api/manual-requests";
+      const method = isEditing ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           equipment_name: formData.get("equipment_name"),
           manufacturer: formData.get("manufacturer"),
@@ -173,11 +190,16 @@ export default function Manuals() {
 
       if (response.ok) {
         setShowRequestModal(false);
+        setEditingRequest(null);
         setActiveTab("requests");
         fetchData();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to save request");
       }
     } catch (error) {
-      console.error("Error creating request:", error);
+      console.error("Error saving request:", error);
+      alert("Failed to save request");
     }
   };
 
@@ -234,19 +256,32 @@ export default function Manuals() {
     setEditingManual(null);
   };
 
-  const handleDeleteRequest = async (requestId: number) => {
-    if (!confirm("Are you sure you want to delete this request?")) return;
+  const handleEditRequest = (request: ManualRequest) => {
+    setEditingRequest(request);
+    setShowRequestModal(true);
+    setShowMenuForRequest(null);
+  };
 
+  const handleDeleteRequest = async (requestId: number | string) => {
+    setIsDeletingRequest(true);
     try {
       const response = await fetch(`/api/manual-requests/${requestId}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
       if (response.ok) {
-        fetchData();
+        setRequests(requests.filter(r => r.id !== requestId));
+        setDeletingRequestId(null);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to delete request");
       }
     } catch (error) {
       console.error("Error deleting request:", error);
+      alert("Failed to delete request");
+    } finally {
+      setIsDeletingRequest(false);
     }
   };
 
@@ -387,43 +422,67 @@ export default function Manuals() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {manuals.map((manual) => {
                 const isOwner = currentUserId && manual.uploaded_by_user_id && String(currentUserId) === String(manual.uploaded_by_user_id);
+                if (manual.uploaded_by_user_id) {
+                  console.log("Manual item:", {
+                    id: manual.id,
+                    uploaded_by_user_id: manual.uploaded_by_user_id,
+                    currentUserId,
+                    isOwner
+                  });
+                }
                 return (
                 <div
                   key={manual.id}
                   className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative"
                 >
-                  {isOwner && (
-                    <div className="absolute top-4 right-4 z-10" ref={(el) => { menuRefs.current[manual.id] = el; }}>
-                      <button
-                        onClick={() => setShowMenuForManual(showMenuForManual === manual.id ? null : manual.id)}
-                        className="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors"
-                        title="Options"
-                      >
-                        <MoreHorizontal className="w-5 h-5 text-gray-600" />
-                      </button>
-                      {showMenuForManual === manual.id && (
-                        <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
-                          <button
-                            onClick={() => handleEditManual(manual)}
-                            className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-                          >
-                            <Code className="w-5 h-5" />
-                            <span className="text-sm font-medium">Edit Manual</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setDeletingManualId(manual.id);
-                              setShowMenuForManual(null);
-                            }}
-                            className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
-                          >
-                            <Flag className="w-5 h-5" />
-                            <span className="text-sm font-medium">Delete Manual</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="absolute top-4 right-4 z-10" ref={(el) => { menuRefs.current[manual.id] = el; }}>
+                    <button
+                      onClick={() => setShowMenuForManual(showMenuForManual === manual.id ? null : manual.id)}
+                      className="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors"
+                      title="Options"
+                    >
+                      <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                    </button>
+                    {showMenuForManual === manual.id && (
+                      <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                        {isOwner && (
+                          <>
+                            <button
+                              onClick={() => {
+                                handleEditManual(manual);
+                                setShowMenuForManual(null);
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                            >
+                              <Code className="w-5 h-5" />
+                              <span className="text-sm font-medium">Edit Manual</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDeletingManualId(manual.id);
+                                setShowMenuForManual(null);
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                            >
+                              <Flag className="w-5 h-5" />
+                              <span className="text-sm font-medium">Delete Manual</span>
+                            </button>
+                            <div className="border-t border-gray-200 my-1"></div>
+                          </>
+                        )}
+                        <button
+                          onClick={() => {
+                            downloadManual(manual.file_url, manual.title);
+                            setShowMenuForManual(null);
+                          }}
+                          className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                        >
+                          <Download className="w-5 h-5" />
+                          <span className="text-sm font-medium">Download</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="w-full h-40 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl mb-4 flex items-center justify-center">
                     <FileText className="w-16 h-16 text-blue-600" />
@@ -493,10 +552,12 @@ export default function Manuals() {
             </div>
           ) : (
             <div className="space-y-4">
-              {requests.map((request) => (
+              {requests.map((request) => {
+                const isOwner = currentUserId && request.user_id && String(currentUserId) === String(request.user_id);
+                return (
                 <div
                   key={request.id}
-                  className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all"
+                  className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all relative"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start gap-3 flex-1">
@@ -544,14 +605,37 @@ export default function Manuals() {
                         )}
                       </div>
                     </div>
-                    {user?.id === request.user_id && (
-                      <button
-                        onClick={() => handleDeleteRequest(request.id)}
-                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                        title="Delete request"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    {isOwner && (
+                      <div className="relative" ref={(el) => { requestMenuRefs.current[request.id] = el; }}>
+                        <button
+                          onClick={() => setShowMenuForRequest(showMenuForRequest === request.id ? null : request.id)}
+                          className="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors"
+                          title="Options"
+                        >
+                          <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                        </button>
+                        {showMenuForRequest === request.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                            <button
+                              onClick={() => handleEditRequest(request)}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                            >
+                              <Code className="w-5 h-5" />
+                              <span className="text-sm font-medium">Edit Request</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDeletingRequestId(request.id);
+                                setShowMenuForRequest(null);
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                            >
+                              <Flag className="w-5 h-5" />
+                              <span className="text-sm font-medium">Delete Request</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -581,7 +665,8 @@ export default function Manuals() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )
         )}
@@ -696,9 +781,14 @@ export default function Manuals() {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-                <h2 className="text-2xl font-bold text-gray-900">Request Manual</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingRequest ? "Edit Request" : "Request Manual"}
+                </h2>
                 <button
-                  onClick={() => setShowRequestModal(false)}
+                  onClick={() => {
+                    setShowRequestModal(false);
+                    setEditingRequest(null);
+                  }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="w-6 h-6 text-gray-500" />
@@ -714,6 +804,7 @@ export default function Manuals() {
                     type="text"
                     name="equipment_name"
                     required
+                    defaultValue={editingRequest?.equipment_name || ""}
                     placeholder="e.g., Ultrasound Machine"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
@@ -727,6 +818,7 @@ export default function Manuals() {
                     <input
                       type="text"
                       name="manufacturer"
+                      defaultValue={editingRequest?.manufacturer || ""}
                       placeholder="e.g., Philips"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
@@ -739,6 +831,7 @@ export default function Manuals() {
                     <input
                       type="text"
                       name="model_number"
+                      defaultValue={editingRequest?.model_number || ""}
                       placeholder="e.g., HD15"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
@@ -752,6 +845,7 @@ export default function Manuals() {
                   <textarea
                     name="description"
                     rows={4}
+                    defaultValue={editingRequest?.description || ""}
                     placeholder="Describe what you're looking for or any specific sections you need..."
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                   />
@@ -761,7 +855,7 @@ export default function Manuals() {
                   type="submit"
                   className="w-full px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:shadow-lg transition-all font-medium"
                 >
-                  Post Request
+                  {editingRequest ? "Update Request" : "Post Request"}
                 </button>
               </form>
             </div>
@@ -945,6 +1039,24 @@ export default function Manuals() {
           message="Are you sure you want to delete this manual? This action cannot be undone."
           itemName={manuals.find(m => m.id === deletingManualId)?.title}
           isDeleting={isDeleting}
+        />
+
+        <DeleteConfirmModal
+          isOpen={deletingRequestId !== null}
+          onClose={() => {
+            if (!isDeletingRequest) {
+              setDeletingRequestId(null);
+            }
+          }}
+          onConfirm={async () => {
+            if (deletingRequestId) {
+              await handleDeleteRequest(deletingRequestId);
+            }
+          }}
+          title="Delete Request"
+          message="Are you sure you want to delete this manual request? This action cannot be undone."
+          itemName={requests.find(r => r.id === deletingRequestId)?.equipment_name}
+          isDeleting={isDeletingRequest}
         />
       </div>
     </DashboardLayout>

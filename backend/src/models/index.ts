@@ -32,3 +32,5 @@ export { ExhibitionCommentReply } from './ExhibitionCommentReply.js';
 export type { IExhibitionCommentReply } from './ExhibitionCommentReply.js';
 export { Course } from './Course.js';
 export type { ICourse } from './Course.js';
+export { Fundraiser } from './Fundraiser.js';
+export type { IFundraiser } from './Fundraiser.js';

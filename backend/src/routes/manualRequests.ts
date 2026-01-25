@@ -82,6 +82,38 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const existing = manualRequests.find(r => r.id === id);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    if (existing.user_id !== req.user!.user_id) {
+      return res.status(403).json({ error: 'Not authorized to edit this request' });
+    }
+
+    const body = req.body as {
+      equipment_name?: string;
+      manufacturer?: string;
+      model_number?: string;
+      description?: string;
+    };
+
+    if (body.equipment_name) existing.equipment_name = body.equipment_name;
+    if (body.manufacturer !== undefined) existing.manufacturer = body.manufacturer || null;
+    if (body.model_number !== undefined) existing.model_number = body.model_number || null;
+    if (body.description !== undefined) existing.description = body.description || null;
+
+    return res.json({ success: true, request: existing });
+  } catch (error) {
+    console.error('Update manual request error:', error);
+    return res.status(500).json({ error: 'Failed to update manual request' });
+  }
+});
+
 router.post('/:id/reply', authMiddleware, upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {
     const id = Number(req.params.id);

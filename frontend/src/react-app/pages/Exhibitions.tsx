@@ -52,9 +52,18 @@ export default function Exhibitions() {
         params.append("category", selectedCategory);
       }
       
-      const response = await fetch(`/api/exhibitions?${params}`);
+      const response = await fetch(`/api/exhibitions?${params}`, {
+        credentials: "include"
+      });
       const data = await response.json();
       setExhibitions(data);
+      
+      if (user && data.length > 0) {
+        const user_id = (user as any).user_id || (user as any).id;
+        console.log("Current user ID:", user_id);
+        console.log("First exhibition posted_by_user_id:", data[0]?.posted_by_user_id);
+        console.log("Match:", data[0]?.posted_by_user_id === user_id);
+      }
     } catch (error) {
       console.error("Error fetching exhibitions:", error);
     } finally {
@@ -295,7 +304,12 @@ export default function Exhibitions() {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onResponseChange={fetchExhibitions}
-                showEditDelete={!!(user && exhibition.posted_by_user_id === (user as any).user_id)}
+                showEditDelete={(() => {
+                  if (!user || !exhibition.posted_by_user_id) return false;
+                  const userId = String((user as any).user_id || (user as any).id || '');
+                  const postedById = String(exhibition.posted_by_user_id || '');
+                  return userId && postedById && userId === postedById;
+                })()}
               />
             ))}
           </div>

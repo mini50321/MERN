@@ -174,22 +174,75 @@ export default function CommentModal({ newsId, newsTitle, isOpen, onClose }: Com
     e.preventDefault();
     if (!user || !replyTexts[commentId]?.trim()) return;
 
+    const replyText = replyTexts[commentId].trim();
     setSubmittingReply(commentId);
+
+    const tempReply: ReplyWithUser = {
+      id: Date.now(),
+      comment_id: commentId,
+      user_id: (user as any).user_id || (user as any).id || '',
+      reply: replyText,
+      full_name: (user as any).profile?.full_name || (user as any).full_name || 'You',
+      profile_picture_url: (user as any).profile?.profile_picture_url || (user as any).profile_picture_url || null,
+      created_at: new Date().toISOString()
+    };
+
+    setReplies(prev => ({
+      ...prev,
+      [commentId]: [...(prev[commentId] || []), tempReply]
+    }));
+
+    setComments(prev => prev.map(c => 
+      c.id === commentId 
+        ? { ...c, replies_count: c.replies_count + 1 }
+        : c
+    ));
+
+    setReplyTexts(prev => ({ ...prev, [commentId]: "" }));
+
     try {
       const response = await fetch(`/api/comments/${commentId}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ reply: replyTexts[commentId] }),
+        body: JSON.stringify({ reply: replyText }),
       });
 
       if (response.ok) {
-        setReplyTexts(prev => ({ ...prev, [commentId]: "" }));
+        const data = await response.json();
+        if (data.reply) {
+          setReplies(prev => ({
+            ...prev,
+            [commentId]: prev[commentId].map(r => 
+              r.id === tempReply.id ? data.reply : r
+            )
+          }));
+        } else {
+          await fetchReplies(commentId);
+        }
+      } else {
+        setReplies(prev => ({
+          ...prev,
+          [commentId]: prev[commentId].filter(r => r.id !== tempReply.id)
+        }));
+        setComments(prev => prev.map(c => 
+          c.id === commentId 
+            ? { ...c, replies_count: Math.max(0, c.replies_count - 1) }
+            : c
+        ));
         await fetchReplies(commentId);
-        await fetchComments();
       }
     } catch (error) {
       console.error("Error posting reply:", error);
+      setReplies(prev => ({
+        ...prev,
+        [commentId]: prev[commentId].filter(r => r.id !== tempReply.id)
+      }));
+      setComments(prev => prev.map(c => 
+        c.id === commentId 
+          ? { ...c, replies_count: Math.max(0, c.replies_count - 1) }
+          : c
+      ));
     } finally {
       setSubmittingReply(null);
     }

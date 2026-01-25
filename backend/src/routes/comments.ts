@@ -29,10 +29,27 @@ router.post('/:id/reply', authMiddleware, async (req: AuthRequest, res: Response
       return res.status(400).json({ error: 'Reply text is required' });
     }
 
+    const { User } = await import('../models/index.js');
+    const user = await User.findOne({ user_id: req.user!.user_id }).lean();
+    
+    const replyId = Date.now();
+    const commentId = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
+    
+    const replyObj = {
+      id: replyId,
+      comment_id: isNaN(commentId) ? 0 : commentId,
+      user_id: req.user!.user_id,
+      reply: reply.trim(),
+      full_name: (user as any)?.profile?.full_name || 'User',
+      profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
     return res.json({ 
       success: true, 
       message: 'Reply posted successfully',
-      id: `reply_${Date.now()}`
+      reply: replyObj
     });
   } catch (error) {
     console.error('Post reply error:', error);

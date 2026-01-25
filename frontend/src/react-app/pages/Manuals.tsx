@@ -148,6 +148,7 @@ export default function Manuals() {
     try {
       const response = await fetch(`/api/manual-requests/${selectedRequest!.id}/reply`, {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
 

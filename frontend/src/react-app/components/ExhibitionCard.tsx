@@ -263,8 +263,8 @@ export default function ExhibitionCard({
   return (
     <div ref={cardRef} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
       <div className="p-6">
-        {exhibition.is_user_post === 1 && exhibition.author_name && (
-          <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-4">
+          {exhibition.is_user_post === 1 && exhibition.author_name ? (
             <div className="flex items-center gap-3 flex-1">
               {exhibition.author_profile_picture_url ? (
                 <img
@@ -289,100 +289,102 @@ export default function ExhibitionCard({
                 </div>
               </div>
             </div>
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <MoreHorizontal className="w-5 h-5 text-gray-600" />
-              </button>
-              
-              {showMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
-                  {showEditDelete && onEdit && (
+          ) : (
+            <div className="flex-1"></div>
+          )}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <MoreHorizontal className="w-5 h-5 text-gray-600" />
+            </button>
+            
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                {showEditDelete && onEdit && (
+                  <button
+                    onClick={() => {
+                      onEdit(exhibition);
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                  >
+                    <Code className="w-5 h-5" />
+                    <span className="text-sm font-medium">Edit Exhibition</span>
+                  </button>
+                )}
+                
+                {showEditDelete && onDelete && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this exhibition?')) {
+                        onDelete(exhibition.id);
+                      }
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                  >
+                    <Flag className="w-5 h-5" />
+                    <span className="text-sm font-medium">Delete Exhibition</span>
+                  </button>
+                )}
+                
+                <button
+                  onClick={handleSave}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <Bookmark className={`w-5 h-5 ${isSaved ? "fill-current" : ""}`} />
+                  <span className="text-sm font-medium">{isSaved ? "Unsave" : "Save"}</span>
+                </button>
+                
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <Link2 className="w-5 h-5" />
+                  <span className="text-sm font-medium">Copy link</span>
+                </button>
+                
+                <button
+                  onClick={handleEmbedPost}
+                  className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                >
+                  <Code className="w-5 h-5" />
+                  <span className="text-sm font-medium">Embed</span>
+                </button>
+                
+                {user && !showEditDelete && (
+                  <>
+                    <div className="border-t border-gray-200 my-2"></div>
+                    
                     <button
                       onClick={() => {
-                        onEdit(exhibition);
+                        onNotInterested(exhibition.id);
                         setShowMenu(false);
                       }}
                       className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
                     >
-                      <Code className="w-5 h-5" />
-                      <span className="text-sm font-medium">Edit Exhibition</span>
+                      <EyeOff className="w-5 h-5" />
+                      <span className="text-sm font-medium">Not interested</span>
                     </button>
-                  )}
-                  
-                  {showEditDelete && onDelete && (
+                    
                     <button
                       onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this exhibition?')) {
-                          onDelete(exhibition.id);
-                        }
+                        onReport(exhibition.id);
                         setShowMenu(false);
                       }}
                       className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
                     >
                       <Flag className="w-5 h-5" />
-                      <span className="text-sm font-medium">Delete Exhibition</span>
+                      <span className="text-sm font-medium">Report</span>
                     </button>
-                  )}
-                  
-                  <button
-                    onClick={handleSave}
-                    className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-                  >
-                    <Bookmark className={`w-5 h-5 ${isSaved ? "fill-current" : ""}`} />
-                    <span className="text-sm font-medium">{isSaved ? "Unsave" : "Save"}</span>
-                  </button>
-                  
-                  <button
-                    onClick={handleCopyLink}
-                    className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-                  >
-                    <Link2 className="w-5 h-5" />
-                    <span className="text-sm font-medium">Copy link</span>
-                  </button>
-                  
-                  <button
-                    onClick={handleEmbedPost}
-                    className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-                  >
-                    <Code className="w-5 h-5" />
-                    <span className="text-sm font-medium">Embed</span>
-                  </button>
-                  
-                  {user && !showEditDelete && (
-                    <>
-                      <div className="border-t border-gray-200 my-2"></div>
-                      
-                      <button
-                        onClick={() => {
-                          onNotInterested(exhibition.id);
-                          setShowMenu(false);
-                        }}
-                        className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
-                      >
-                        <EyeOff className="w-5 h-5" />
-                        <span className="text-sm font-medium">Not interested</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          onReport(exhibition.id);
-                          setShowMenu(false);
-                        }}
-                        className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
-                      >
-                        <Flag className="w-5 h-5" />
-                        <span className="text-sm font-medium">Report</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         <h3 className="text-xl font-bold text-gray-900 mb-3">{exhibition.title}</h3>
         

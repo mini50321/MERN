@@ -308,7 +308,7 @@ export default function Exhibitions() {
                   if (!user || !exhibition.posted_by_user_id) return false;
                   const userId = String((user as any).user_id || (user as any).id || '');
                   const postedById = String(exhibition.posted_by_user_id || '');
-                  return userId && postedById && userId === postedById;
+                  return !!(userId && postedById && userId === postedById);
                 })()}
               />
             ))}

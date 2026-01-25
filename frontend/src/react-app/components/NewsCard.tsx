@@ -56,15 +56,14 @@ export default function NewsCard({
   }, []);
 
   const handleLike = async () => {
-    if (!news.id && !news._id) {
+    if (!news.id) {
       console.error('News item missing ID:', news);
       return;
     }
-    const newsId = news.id || news._id;
     const newLikedState = !isLiked;
     setIsLiked(newLikedState);
     setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
-    onLike(newsId);
+    onLike(news.id);
   };
 
   const handleSave = async () => {

@@ -374,10 +374,10 @@ export default function ExhibitionCommentModal({ exhibitionId, exhibitionTitle, 
                           />
                           <button
                             onClick={() => handleReply(comment.id)}
-                            disabled={!replyText.trim()}
+                            disabled={!replyText.trim() || submittingReply === comment.id}
                             className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Send
+                            {submittingReply === comment.id ? "Sending..." : "Send"}
                           </button>
                         </div>
                       )}

@@ -295,7 +295,7 @@ export default function Exhibitions() {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onResponseChange={fetchExhibitions}
-                showEditDelete={user && exhibition.posted_by_user_id === (user as any).user_id}
+                showEditDelete={!!(user && exhibition.posted_by_user_id === (user as any).user_id)}
               />
             ))}
           </div>

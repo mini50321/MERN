@@ -10,7 +10,8 @@ import {
   EyeOff,
   Flag,
   CheckCircle,
-  Hash
+  Hash,
+  Code
 } from "lucide-react";
 import { useAuth } from "@getmocha/users-service/react";
 import ShareModal from "@/react-app/components/ShareModal";
@@ -24,6 +25,9 @@ interface NewsCardProps {
   onFollow: (userId: string) => void;
   onReport: (newsId: number) => void;
   onNotInterested: (newsId: number) => void;
+  onEdit?: (news: NewsWithCounts) => void;
+  onDelete?: (newsId: number | string) => void;
+  showEditDelete?: boolean;
 }
 
 export default function NewsCard({ 
@@ -33,7 +37,10 @@ export default function NewsCard({
   onSave,
   onFollow,
   onReport,
-  onNotInterested
+  onNotInterested,
+  onEdit,
+  onDelete,
+  showEditDelete = false
 }: NewsCardProps) {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(news.user_liked);
@@ -108,8 +115,8 @@ export default function NewsCard({
   return (
     <div className="bg-white rounded-xl shadow hover:shadow-md transition-all duration-300 overflow-hidden">
       <div className="p-3">
-        {news.is_user_post === 1 && news.author_name && (
-          <div className="flex items-start justify-between mb-2">
+        <div className="flex items-start justify-between mb-2">
+          {news.is_user_post === 1 && news.author_name ? (
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {news.author_profile_picture_url ? (
                 <img
@@ -128,7 +135,7 @@ export default function NewsCard({
                   {news.posted_by_user_id && (
                     <CheckCircle className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                   )}
-                  {user && news.posted_by_user_id !== user.id && (
+                  {user && news.posted_by_user_id && String(news.posted_by_user_id) !== String((user as any)?.user_id || (user as any)?.id) && (
                     <>
                       <span className="text-gray-400 text-xs">•</span>
                       <button
@@ -151,16 +158,53 @@ export default function NewsCard({
                 </div>
               </div>
             </div>
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <MoreHorizontal className="w-4 h-4 text-gray-600" />
-              </button>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 flex-1">
+              <span>{news.category || "News"}</span>
+              <span>•</span>
+              <span>{getRelativeTime(news.created_at)}</span>
+            </div>
+          )}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <MoreHorizontal className="w-4 h-4 text-gray-600" />
+            </button>
               
               {showMenu && (
                 <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 w-56 z-50">
+                  {showEditDelete && onEdit && (
+                    <button
+                      onClick={() => {
+                        onEdit(news);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                    >
+                      <Code className="w-4 h-4" />
+                      <span className="text-xs font-medium">Edit Post</span>
+                    </button>
+                  )}
+                  
+                  {showEditDelete && onDelete && (
+                    <button
+                      onClick={() => {
+                        onDelete(news.id);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                    >
+                      <Flag className="w-4 h-4" />
+                      <span className="text-xs font-medium">Delete Post</span>
+                    </button>
+                  )}
+                  
+                  {showEditDelete && (onEdit || onDelete) && (
+                    <div className="border-t border-gray-200 my-1"></div>
+                  )}
+                  
                   <button
                     onClick={handleSave}
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
@@ -177,18 +221,20 @@ export default function NewsCard({
                     <span className="text-xs font-medium">Copy link to post</span>
                   </button>
                   
-                  <button
-                    onClick={() => {
-                      onReport(news.id);
-                      setShowMenu(false);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
-                  >
-                    <Flag className="w-4 h-4" />
-                    <span className="text-xs font-medium">Report post</span>
-                  </button>
+                  {!showEditDelete && (
+                    <button
+                      onClick={() => {
+                        onReport(news.id);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                    >
+                      <Flag className="w-4 h-4" />
+                      <span className="text-xs font-medium">Report post</span>
+                    </button>
+                  )}
                   
-                  {user && news.posted_by_user_id !== user.id && (
+                  {user && news.posted_by_user_id !== user.id && !showEditDelete && (
                     <>
                       <div className="border-t border-gray-200 my-1"></div>
                       
@@ -220,8 +266,7 @@ export default function NewsCard({
                 </div>
               )}
             </div>
-          </div>
-        )}
+        </div>
 
         <h3 className="text-base font-bold text-gray-900 mb-1.5 leading-snug">{news.title}</h3>
         <p className="text-sm text-gray-700 mb-2 whitespace-pre-wrap leading-relaxed">{news.content}</p>

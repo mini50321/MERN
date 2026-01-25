@@ -65,7 +65,8 @@ router.get('/', async (req: Request, res: Response) => {
       price: course.price,
       currency: course.currency,
       equipment_name: course.equipment_name || '',
-      equipment_model: course.equipment_model || ''
+      equipment_model: course.equipment_model || '',
+      submitted_by_user_id: course.submitted_by_user_id
     }));
 
     return res.json(formattedCourses);
@@ -411,6 +412,86 @@ router.get('/instructor/earnings', authMiddleware, async (_req: AuthRequest, res
   } catch (error) {
     console.error('Get instructor earnings error:', error);
     return res.status(500).json({ error: 'Failed to fetch instructor earnings' });
+  }
+});
+
+router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const courseId = req.params.id;
+    const body = req.body;
+    
+    let course;
+    if (courseId.match(/^[0-9a-fA-F]{24}$/)) {
+      course = await Course.findOneAndUpdate(
+        { 
+          _id: courseId,
+          submitted_by_user_id: req.user!.user_id 
+        },
+        { $set: body },
+        { new: true }
+      );
+    } else {
+      const allCourses = await Course.find({ submitted_by_user_id: req.user!.user_id }).lean();
+      const found = allCourses.find(c => {
+        const idNum = parseInt(c._id.toString().slice(-8), 16);
+        return idNum === parseInt(courseId, 10);
+      });
+      if (found) {
+        course = await Course.findOneAndUpdate(
+          { 
+            _id: found._id,
+            submitted_by_user_id: req.user!.user_id 
+          },
+          { $set: body },
+          { new: true }
+        );
+      }
+    }
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found or user not authorized' });
+    }
+
+    return res.json({ course, success: true });
+  } catch (error) {
+    console.error('Update course error:', error);
+    return res.status(500).json({ error: 'Failed to update course' });
+  }
+});
+
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const courseId = req.params.id;
+    
+    let course;
+    if (courseId.match(/^[0-9a-fA-F]{24}$/)) {
+      course = await Course.findOne({ 
+        _id: courseId,
+        submitted_by_user_id: req.user!.user_id 
+      });
+    } else {
+      const allCourses = await Course.find({ submitted_by_user_id: req.user!.user_id }).lean();
+      const found = allCourses.find(c => {
+        const idNum = parseInt(c._id.toString().slice(-8), 16);
+        return idNum === parseInt(courseId, 10);
+      });
+      if (found) {
+        course = await Course.findOne({ 
+          _id: found._id,
+          submitted_by_user_id: req.user!.user_id 
+        });
+      }
+    }
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found or user not authorized' });
+    }
+
+    await Course.findByIdAndDelete(course._id);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Delete course error:', error);
+    return res.status(500).json({ error: 'Failed to delete course' });
   }
 });
 

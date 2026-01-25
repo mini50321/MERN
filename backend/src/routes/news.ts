@@ -32,7 +32,8 @@ router.get('/', async (req: Request, res: Response) => {
     
     const formatted = news.map(item => ({
       ...item,
-      id: item._id.toString()
+      id: item._id.toString(),
+      posted_by_user_id: item.posted_by_user_id
     }));
     
     return res.json(formatted);

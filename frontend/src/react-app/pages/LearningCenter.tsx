@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@getmocha/users-service/react";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import CreateCourseModal from "@/react-app/components/CreateCourseModal";
 import CourseDetailModal from "@/react-app/components/CourseDetailModal";
 import { getLocalizedPrice } from "@/shared/currency-utils";
-import { GraduationCap, PlayCircle, Clock, BookOpen, Plus, Check, Star, Users } from "lucide-react";
+import { GraduationCap, PlayCircle, Clock, BookOpen, Plus, Check, Star, Users, MoreHorizontal, Code, Flag } from "lucide-react";
+import EditCourseModal from "@/react-app/components/EditCourseModal";
+import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 
 interface Course {
-  id: number;
+  id: number | string;
   title: string;
   description: string;
   duration_hours: number;
@@ -23,6 +25,15 @@ interface Course {
   currency: string;
   equipment_name: string;
   equipment_model: string;
+  submitted_by_user_id?: string;
+  video_url?: string;
+  instructor_bio?: string;
+  instructor_image_url?: string;
+  instructor_credentials?: string;
+  learning_objectives?: string;
+  prerequisites?: string;
+  course_outline?: string;
+  content?: string;
 }
 
 export default function LearningCenter() {
@@ -35,6 +46,12 @@ export default function LearningCenter() {
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [enrolledCourses, setEnrolledCourses] = useState<Set<number>>(new Set());
   const [userCountry, setUserCountry] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [deletingCourseId, setDeletingCourseId] = useState<number | string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showMenuForCourse, setShowMenuForCourse] = useState<number | string | null>(null);
+  const menuRefs = useRef<Record<string | number, HTMLDivElement | null>>({});
 
   const categories = ["All", "Equipment Maintenance", "Safety Protocols", "Diagnostics", "Regulations", "Clinical Skills", "Technology"];
 
@@ -45,6 +62,20 @@ export default function LearningCenter() {
       loadUserProfile();
     }
   }, [selectedCategory, user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMenuForCourse !== null) {
+        const menuElement = menuRefs.current[showMenuForCourse];
+        if (menuElement && !menuElement.contains(event.target as Node)) {
+          setShowMenuForCourse(null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenuForCourse]);
 
   const loadCourses = async () => {
     setIsLoading(true);
@@ -76,10 +107,12 @@ export default function LearningCenter() {
 
   const loadUserProfile = async () => {
     try {
-      const res = await fetch("/api/users/me");
+      const res = await fetch("/api/users/me", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setUserCountry(data.profile?.country || null);
+        const userId = data.profile?.user_id || data.user_id || (user as any)?.user_id || (user as any)?.id;
+        setCurrentUserId(userId);
       }
     } catch (error) {
       console.error("Error loading user profile:", error);
@@ -90,6 +123,43 @@ export default function LearningCenter() {
     setShowSuccessToast(true);
     setTimeout(() => setShowSuccessToast(false), 4000);
     loadCourses();
+  };
+
+  const handleEdit = (course: Course) => {
+    setEditingCourse(course);
+    setShowMenuForCourse(null);
+  };
+
+  const handleDelete = async (courseId: number | string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setCourses(courses.filter(c => c.id !== courseId));
+        setDeletingCourseId(null);
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to delete course");
+      }
+    } catch (error) {
+      console.error("Error deleting course:", error);
+      alert("Failed to delete course");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    loadCourses();
+    setEditingCourse(null);
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 3000);
   };
 
   const filteredCourses = selectedCategory === "All"
@@ -142,12 +212,12 @@ export default function LearningCenter() {
             {filteredCourses.map((course) => {
               const isEnrolled = enrolledCourses.has(course.id);
               const localizedPrice = getLocalizedPrice(course.price, course.currency, userCountry);
+              const isOwner = currentUserId && course.submitted_by_user_id && String(currentUserId) === String(course.submitted_by_user_id);
 
               return (
                 <div
                   key={course.id}
-                  onClick={() => setSelectedCourseId(course.id)}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 relative"
                 >
                   <div className={`h-48 bg-gradient-to-br ${course.thumbnail_gradient || "from-blue-500 to-cyan-500"} flex items-center justify-center relative overflow-hidden`}>
                     {course.image_url ? (
@@ -159,14 +229,55 @@ export default function LearningCenter() {
                     ) : (
                       <PlayCircle className="w-16 h-16 text-white opacity-90" />
                     )}
-                    {isEnrolled && (
-                      <div className="absolute top-3 right-3 px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        Enrolled
-                      </div>
-                    )}
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                      {isEnrolled && (
+                        <div className="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          Enrolled
+                        </div>
+                      )}
+                      {isOwner && (
+                        <div className="relative z-10" ref={(el) => { menuRefs.current[course.id] = el; }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMenuForCourse(showMenuForCourse === course.id ? null : course.id);
+                            }}
+                            className="p-2 bg-white hover:bg-gray-100 rounded-lg shadow-md transition-colors"
+                            title="Options"
+                          >
+                            <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                          </button>
+                          {showMenuForCourse === course.id && (
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-2 w-64 z-50">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(course);
+                                }}
+                                className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-gray-700"
+                              >
+                                <Code className="w-5 h-5" />
+                                <span className="text-sm font-medium">Edit Course</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingCourseId(course.id);
+                                  setShowMenuForCourse(null);
+                                }}
+                                className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
+                              >
+                                <Flag className="w-5 h-5" />
+                                <span className="text-sm font-medium">Delete Course</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-6">
+                  <div className="p-6" onClick={() => setSelectedCourseId(typeof course.id === 'number' ? course.id : parseInt(String(course.id), 10))}>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                         {course.category}

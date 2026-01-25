@@ -172,11 +172,12 @@ export default function EditCourseModal({
 
       // Update course
       setUploadProgress("Updating course...");
-      const courseRes = await fetch(`/api/admin/courses/${course.id}`, {
+      const courseRes = await fetch(`/api/courses/${course.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           ...formData,
           video_url: videoUrl,

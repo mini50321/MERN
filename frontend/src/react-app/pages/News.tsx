@@ -6,6 +6,8 @@ import CommentModal from "@/react-app/components/CommentModal";
 import CreateNewsModal from "@/react-app/components/CreateNewsModal";
 import ReportModal from "@/react-app/components/ReportModal";
 import { Newspaper, Check, Plus, Sparkles } from "lucide-react";
+import EditNewsModal from "@/react-app/components/EditNewsModal";
+import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import type { NewsWithCounts } from "@/shared/types";
 import { shuffleArray } from "@/shared/utils";
 
@@ -43,13 +45,36 @@ export default function News() {
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [fetchingAdmin, setFetchingAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [editingNews, setEditingNews] = useState<NewsWithCounts | null>(null);
+  const [deletingNewsId, setDeletingNewsId] = useState<number | string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   /* =========================
      Effects
   ========================= */
   useEffect(() => {
-    if (user) checkAdmin();
+    if (user) {
+      checkAdmin();
+      fetchUserProfile();
+    }
   }, [user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const res = await fetch("/api/users/me", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const userId = data.profile?.user_id || data.user_id || (user as any)?.user_id || (user as any)?.id;
+        setCurrentUserId(userId);
+        console.log("Current user ID:", userId);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
 
   useEffect(() => {
     fetchNews();
@@ -165,6 +190,40 @@ export default function News() {
     }
   };
 
+  const handleEdit = (newsItem: NewsWithCounts) => {
+    setEditingNews(newsItem);
+  };
+
+  const handleDelete = async (newsId: number | string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/news/${newsId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setNews(news.filter(n => n.id !== newsId));
+        setDeletingNewsId(null);
+        showToast("News post deleted successfully");
+      } else {
+        const data = await response.json();
+        showToast(data.error || "Failed to delete news post");
+      }
+    } catch (error) {
+      console.error("Error deleting news:", error);
+      showToast("Failed to delete news post");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    fetchNews();
+    setEditingNews(null);
+    showToast("News post updated successfully");
+  };
+
   /* =========================
      Render
   ========================= */
@@ -229,18 +288,32 @@ export default function News() {
           </div>
         ) : (
           <div className="space-y-6">
-            {news.map((item) => (
-              <NewsCard
-                key={item.id}
-                news={item}
-                onLike={likeNews}
-                onComment={commentNews}
-                onSave={saveNews}
-                onFollow={followUser}
-                onReport={reportNews}
-                onNotInterested={notInterested}
-              />
-            ))}
+            {news.map((item) => {
+              const isOwner = currentUserId && item.posted_by_user_id && String(currentUserId) === String(item.posted_by_user_id);
+              if (item.posted_by_user_id) {
+                console.log("News item:", {
+                  id: item.id,
+                  posted_by_user_id: item.posted_by_user_id,
+                  currentUserId,
+                  isOwner
+                });
+              }
+              return (
+                <NewsCard
+                  key={item.id}
+                  news={item}
+                  onLike={likeNews}
+                  onComment={commentNews}
+                  onSave={saveNews}
+                  onFollow={followUser}
+                  onReport={reportNews}
+                  onNotInterested={notInterested}
+                  onEdit={isOwner ? () => handleEdit(item) : undefined}
+                  onDelete={isOwner ? () => setDeletingNewsId(item.id) : undefined}
+                  showEditDelete={isOwner}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -284,6 +357,33 @@ export default function News() {
             {toast}
           </div>
         )}
+
+        {editingNews && (
+          <EditNewsModal
+            post={editingNews}
+            isOpen={!!editingNews}
+            onClose={() => setEditingNews(null)}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+
+        <DeleteConfirmModal
+          isOpen={deletingNewsId !== null}
+          onClose={() => {
+            if (!isDeleting) {
+              setDeletingNewsId(null);
+            }
+          }}
+          onConfirm={async () => {
+            if (deletingNewsId) {
+              await handleDelete(deletingNewsId);
+            }
+          }}
+          title="Delete News Post"
+          message="Are you sure you want to delete this news post? This action cannot be undone."
+          itemName={news.find(n => n.id === deletingNewsId)?.title}
+          isDeleting={isDeleting}
+        />
       </div>
     </DashboardLayout>
   );

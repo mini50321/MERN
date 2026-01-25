@@ -92,7 +92,7 @@ router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) =>
   }
 });
 
-router.get('/:id/comments', async (req: Request, res: Response) => {
+router.get('/:id/comments', async (_req: Request, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {

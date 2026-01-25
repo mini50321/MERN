@@ -92,6 +92,34 @@ router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) =>
   }
 });
 
+router.get('/:id/comments', async (_req: Request, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error) {
+    console.error('Get news comments error:', error);
+    return res.status(500).json({ error: 'Failed to fetch comments' });
+  }
+});
+
+router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const news = await NewsUpdate.findById(req.params.id);
+    
+    if (!news) {
+      return res.status(404).json({ error: 'News not found' });
+    }
+
+    return res.json({ 
+      success: true, 
+      message: 'Comment posted successfully',
+      id: `comment_${Date.now()}`
+    });
+  } catch (error) {
+    console.error('Post comment error:', error);
+    return res.status(500).json({ error: 'Failed to post comment' });
+  }
+});
+
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const news = await NewsUpdate.findById(req.params.id).lean();

@@ -30,11 +30,18 @@ export default function CommentModal({ newsId, newsTitle, isOpen, onClose }: Com
   const fetchComments = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/news/${newsId}/comments`);
-      const data = await response.json();
-      setComments(data);
+      const response = await fetch(`/api/news/${newsId}/comments`, {
+        credentials: "include"
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setComments(Array.isArray(data) ? data : []);
+      } else {
+        setComments([]);
+      }
     } catch (error) {
       console.error("Error fetching comments:", error);
+      setComments([]);
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +66,7 @@ export default function CommentModal({ newsId, newsTitle, isOpen, onClose }: Com
       const response = await fetch(`/api/news/${newsId}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ comment: newComment }),
       });
 
@@ -96,6 +104,7 @@ export default function CommentModal({ newsId, newsTitle, isOpen, onClose }: Com
     try {
       await fetch(`/api/comments/${commentId}/like`, {
         method: "POST",
+        credentials: "include"
       });
     } catch (error) {
       console.error("Error liking comment:", error);
@@ -140,6 +149,7 @@ export default function CommentModal({ newsId, newsTitle, isOpen, onClose }: Com
       const response = await fetch(`/api/comments/${commentId}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ reply: replyTexts[commentId] }),
       });
 

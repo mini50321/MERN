@@ -3,6 +3,7 @@ import DashboardLayout from "@/react-app/components/DashboardLayout";
 import ExhibitionCard from "@/react-app/components/ExhibitionCard";
 import CreateExhibitionModal from "@/react-app/components/CreateExhibitionModal";
 import ExhibitionCommentModal from "@/react-app/components/ExhibitionCommentModal";
+import EditExhibitionModal from "@/react-app/components/EditExhibitionModal";
 import { Calendar, Check, Plus, Sparkles } from "lucide-react";
 import { useAuth } from "@getmocha/users-service/react";
 import type { ExhibitionWithCounts } from "@/shared/exhibition-types";
@@ -17,6 +18,7 @@ export default function Exhibitions() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedExhibitionId, setSelectedExhibitionId] = useState<number | null>(null);
   const [selectedExhibitionTitle, setSelectedExhibitionTitle] = useState("");
+  const [editingExhibition, setEditingExhibition] = useState<ExhibitionWithCounts | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
@@ -142,6 +144,39 @@ export default function Exhibitions() {
     showToast("We'll show you less exhibitions like this");
   };
 
+  const handleEdit = (exhibition: ExhibitionWithCounts) => {
+    setEditingExhibition(exhibition);
+  };
+
+  const handleDelete = async (exhibitionId: number) => {
+    if (!window.confirm('Are you sure you want to delete this exhibition?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/exhibitions/${exhibitionId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        setExhibitions(exhibitions.filter(e => e.id !== exhibitionId));
+        showToast("Exhibition deleted successfully");
+      } else {
+        showToast("Failed to delete exhibition");
+      }
+    } catch (error) {
+      console.error("Error deleting exhibition:", error);
+      showToast("Failed to delete exhibition");
+    }
+  };
+
+  const handleEditSuccess = () => {
+    fetchExhibitions();
+    setEditingExhibition(null);
+    showToast("Exhibition updated successfully");
+  };
+
   const handleCreateSuccess = () => {
     fetchExhibitions();
   };
@@ -257,7 +292,10 @@ export default function Exhibitions() {
                 onSave={handleSave}
                 onReport={handleReport}
                 onNotInterested={handleNotInterested}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
                 onResponseChange={fetchExhibitions}
+                showEditDelete={user && exhibition.posted_by_user_id === (user as any).user_id}
               />
             ))}
           </div>
@@ -282,6 +320,15 @@ export default function Exhibitions() {
             exhibitionTitle={selectedExhibitionTitle}
             isOpen={!!selectedExhibitionId}
             onClose={handleCloseComments}
+          />
+        )}
+
+        {editingExhibition && (
+          <EditExhibitionModal
+            exhibition={editingExhibition}
+            isOpen={!!editingExhibition}
+            onClose={() => setEditingExhibition(null)}
+            onSuccess={handleEditSuccess}
           />
         )}
       </div>

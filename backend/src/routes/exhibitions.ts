@@ -141,14 +141,35 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const exhibition = await Exhibition.findOneAndUpdate(
-      { 
-        _id: req.params.id,
-        posted_by_user_id: req.user!.user_id 
-      },
-      { $set: req.body },
-      { new: true }
-    );
+    const exhibitionId = req.params.id;
+    let exhibition;
+    
+    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findOneAndUpdate(
+        { 
+          _id: exhibitionId,
+          posted_by_user_id: req.user!.user_id 
+        },
+        { $set: req.body },
+        { new: true }
+      );
+    } else {
+      const allExhibitions = await Exhibition.find({ posted_by_user_id: req.user!.user_id }).lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(exhibitionId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findOneAndUpdate(
+          { 
+            _id: found._id,
+            posted_by_user_id: req.user!.user_id 
+          },
+          { $set: req.body },
+          { new: true }
+        );
+      }
+    }
 
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
@@ -163,15 +184,33 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const exhibition = await Exhibition.findOneAndDelete({ 
-      _id: req.params.id,
-      posted_by_user_id: req.user!.user_id 
-    });
+    const exhibitionId = req.params.id;
+    let exhibition;
+    
+    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findOne({ 
+        _id: exhibitionId,
+        posted_by_user_id: req.user!.user_id 
+      });
+    } else {
+      const allExhibitions = await Exhibition.find({ posted_by_user_id: req.user!.user_id }).lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(exhibitionId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findOne({ 
+          _id: found._id,
+          posted_by_user_id: req.user!.user_id 
+        });
+      }
+    }
 
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
     }
 
+    await Exhibition.findByIdAndDelete(exhibition._id);
     return res.json({ success: true });
   } catch (error) {
     console.error('Delete exhibition error:', error);

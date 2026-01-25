@@ -184,7 +184,8 @@ export default function CommentModal({ newsId, newsTitle, isOpen, onClose }: Com
       reply: replyText,
       full_name: (user as any).profile?.full_name || (user as any).full_name || 'You',
       profile_picture_url: (user as any).profile?.profile_picture_url || (user as any).profile_picture_url || null,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     setReplies(prev => ({

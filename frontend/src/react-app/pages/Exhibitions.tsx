@@ -174,10 +174,6 @@ export default function Exhibitions() {
   };
 
   const handleDelete = async (exhibitionId: number) => {
-    if (!window.confirm('Are you sure you want to delete this exhibition?')) {
-      return;
-    }
-
     try {
       const response = await fetch(`/api/exhibitions/${exhibitionId}`, {
         method: "DELETE",

@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@getmocha/users-service/react";
 import type { ExhibitionWithCounts } from "@/shared/exhibition-types";
 import ExhibitionShareModal from "./ExhibitionShareModal";
+import DeleteConfirmModal from "./DeleteConfirmModal";
 
 interface ExhibitionCardProps {
   exhibition: ExhibitionWithCounts;
@@ -59,6 +60,8 @@ export default function ExhibitionCard({
   const [notGoingCount, setNotGoingCount] = useState(exhibition.not_going_count || 0);
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [viewTracked, setViewTracked] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -318,9 +321,7 @@ export default function ExhibitionCard({
                 {showEditDelete && onDelete && (
                   <button
                     onClick={() => {
-                      if (window.confirm('Are you sure you want to delete this exhibition?')) {
-                        onDelete(exhibition.id);
-                      }
+                      setShowDeleteModal(true);
                       setShowMenu(false);
                     }}
                     className="w-full px-4 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 text-red-600"
@@ -603,6 +604,31 @@ export default function ExhibitionCard({
           title: exhibition.title,
           description: exhibition.description,
         }}
+      />
+
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          if (!isDeleting) {
+            setShowDeleteModal(false);
+          }
+        }}
+        onConfirm={async () => {
+          if (!onDelete) return;
+          setIsDeleting(true);
+          try {
+            await onDelete(exhibition.id);
+            setShowDeleteModal(false);
+          } catch (error) {
+            console.error("Error deleting exhibition:", error);
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+        title="Delete Exhibition"
+        message="Are you sure you want to delete this exhibition? This action cannot be undone."
+        itemName={exhibition.title}
+        isDeleting={isDeleting}
       />
     </div>
   );

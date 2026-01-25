@@ -21,6 +21,7 @@ export default function Exhibitions() {
   const [editingExhibition, setEditingExhibition] = useState<ExhibitionWithCounts | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const categories = ["All", "Conference", "Trade Show", "Symposium", "Workshop", "Seminar", "Exhibition", "Other"];
 
@@ -29,7 +30,7 @@ export default function Exhibitions() {
       if (!user) return;
       
       try {
-        const res = await fetch("/api/check-admin");
+        const res = await fetch("/api/check-admin", { credentials: "include" });
         const data = await res.json();
         setIsAdmin(data.is_admin);
       } catch (error) {
@@ -37,7 +38,23 @@ export default function Exhibitions() {
       }
     };
 
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const res = await fetch("/api/users/me", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          const userId = data.profile?.user_id || data.user_id || (user as any).user_id || (user as any).id;
+          setCurrentUserId(userId);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+
     checkAdmin();
+    fetchUserProfile();
   }, [user]);
 
   useEffect(() => {
@@ -58,11 +75,10 @@ export default function Exhibitions() {
       const data = await response.json();
       setExhibitions(data);
       
-      if (user && data.length > 0) {
-        const user_id = (user as any).user_id || (user as any).id;
-        console.log("Current user ID:", user_id);
+      if (currentUserId && data.length > 0) {
+        console.log("Current user ID:", currentUserId);
         console.log("First exhibition posted_by_user_id:", data[0]?.posted_by_user_id);
-        console.log("Match:", data[0]?.posted_by_user_id === user_id);
+        console.log("Match:", data[0]?.posted_by_user_id === currentUserId);
       }
     } catch (error) {
       console.error("Error fetching exhibitions:", error);
@@ -305,10 +321,10 @@ export default function Exhibitions() {
                 onDelete={handleDelete}
                 onResponseChange={fetchExhibitions}
                 showEditDelete={(() => {
-                  if (!user || !exhibition.posted_by_user_id) return false;
-                  const userId = String((user as any).user_id || (user as any).id || '');
-                  const postedById = String(exhibition.posted_by_user_id || '');
-                  return !!(userId && postedById && userId === postedById);
+                  if (!currentUserId || !exhibition.posted_by_user_id) return false;
+                  const userId = String(currentUserId);
+                  const postedById = String(exhibition.posted_by_user_id);
+                  return userId === postedById;
                 })()}
               />
             ))}

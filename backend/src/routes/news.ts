@@ -92,7 +92,7 @@ router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) =>
   }
 });
 
-router.get('/:id/comments', async (_req: Request, res: Response) => {
+router.get('/:id/comments', async (req: Request, res: Response) => {
   try {
     return res.json([]);
   } catch (error) {
@@ -109,10 +109,29 @@ router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Respon
       return res.status(404).json({ error: 'News not found' });
     }
 
+    const { User } = await import('../models/index.js');
+    const user = await User.findOne({ user_id: req.user!.user_id }).lean();
+    
+    const commentId = Date.now();
+    const newsIdNum = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
+    const comment = {
+      id: commentId,
+      news_id: isNaN(newsIdNum) ? 0 : newsIdNum,
+      user_id: req.user!.user_id,
+      comment: req.body.comment,
+      full_name: (user as any)?.profile?.full_name || 'User',
+      profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      likes_count: 0,
+      replies_count: 0,
+      user_liked: false
+    };
+
     return res.json({ 
       success: true, 
       message: 'Comment posted successfully',
-      id: `comment_${Date.now()}`
+      comment: comment
     });
   } catch (error) {
     console.error('Post comment error:', error);

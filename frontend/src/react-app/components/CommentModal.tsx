@@ -61,21 +61,51 @@ export default function CommentModal({ newsId, newsTitle, isOpen, onClose }: Com
     e.preventDefault();
     if (!newComment.trim() || !user) return;
 
+    const commentText = newComment.trim();
     setIsSubmitting(true);
+    
+    const tempComment: CommentWithCounts = {
+      id: Date.now(),
+      news_id: newsId,
+      user_id: (user as any).user_id || (user as any).id || '',
+      comment: commentText,
+      full_name: (user as any).profile?.full_name || (user as any).full_name || 'You',
+      profile_picture_url: (user as any).profile?.profile_picture_url || (user as any).profile_picture_url || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      likes_count: 0,
+      replies_count: 0,
+      user_liked: false
+    };
+
+    setComments(prev => [tempComment, ...prev]);
+    setNewComment("");
+
     try {
       const response = await fetch(`/api/news/${newsId}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ comment: newComment }),
+        body: JSON.stringify({ comment: commentText }),
       });
 
       if (response.ok) {
-        setNewComment("");
+        const data = await response.json();
+        if (data.comment) {
+          setComments(prev => prev.map(c => 
+            c.id === tempComment.id ? data.comment : c
+          ));
+        } else {
+          await fetchComments();
+        }
+      } else {
+        setComments(prev => prev.filter(c => c.id !== tempComment.id));
         await fetchComments();
       }
     } catch (error) {
       console.error("Error posting comment:", error);
+      setComments(prev => prev.filter(c => c.id !== tempComment.id));
+      await fetchComments();
     } finally {
       setIsSubmitting(false);
     }

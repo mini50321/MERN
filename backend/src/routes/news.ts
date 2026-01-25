@@ -27,9 +27,15 @@ router.get('/', async (req: Request, res: Response) => {
     if (category) query.category = category;
 
     const news = await NewsUpdate.find(query)
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .lean();
     
-    return res.json(news);
+    const formatted = news.map(item => ({
+      ...item,
+      id: item._id.toString()
+    }));
+    
+    return res.json(formatted);
   } catch (error) {
     console.error('Get news error:', error);
     return res.status(500).json({ error: 'Failed to fetch news' });
@@ -88,13 +94,16 @@ router.get('/saved', authMiddleware, async (_req: AuthRequest, res: Response) =>
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const news = await NewsUpdate.findById(req.params.id);
-    
+    const news = await NewsUpdate.findById(req.params.id).lean();
+
     if (!news) {
       return res.status(404).json({ error: 'News not found' });
     }
 
-    return res.json(news);
+    return res.json({
+      ...news,
+      id: news._id.toString()
+    });
   } catch (error) {
     console.error('Get news error:', error);
     return res.status(500).json({ error: 'Failed to fetch news' });

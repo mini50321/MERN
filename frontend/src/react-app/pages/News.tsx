@@ -97,9 +97,18 @@ export default function News() {
   ========================= */
   const likeNews = async (id: number) => {
     if (!user) return alert("Please sign in to like posts");
+    if (!id) {
+      console.error('Cannot like: news ID is undefined');
+      return;
+    }
     try {
-      await fetch(`/api/news/${id}/like`, { method: "POST" });
-    } catch {}
+      await fetch(`/api/news/${id}/like`, { 
+        method: "POST",
+        credentials: "include"
+      });
+    } catch (error) {
+      console.error('Error liking news:', error);
+    }
   };
 
   const commentNews = (id: number) => {

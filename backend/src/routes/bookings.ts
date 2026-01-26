@@ -154,42 +154,81 @@ router.get('/partner/ratings', authMiddleware, async (req: AuthRequest, res: Res
       return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    const ratings = await ServiceOrder.find({
-      assigned_engineer_id: userId,
-      status: 'completed',
-      partner_rating: { $exists: true, $ne: null }
-    })
-    .sort({ created_at: -1 })
-    .lean();
-    
-    const formattedRatings = ratings.map((order: any) => {
-      try {
-        return {
-          id: parseInt(order._id.toString().slice(-8), 16) || Date.now(),
-          patient_name: order.patient_name || 'Anonymous',
-          service_type: order.service_type || 'Service',
-          equipment_name: order.equipment_name || null,
-          partner_rating: order.partner_rating || 0,
-          partner_review: order.partner_review || '',
-          created_at: order.created_at ? (order.created_at instanceof Date ? order.created_at.toISOString() : new Date(order.created_at).toISOString()) : new Date().toISOString()
-        };
-      } catch (mapError) {
-        console.error('Error formatting rating:', mapError);
-        return null;
-      }
-    }).filter((rating: any) => rating !== null);
-    
-    const avgRating = formattedRatings.length > 0
-      ? formattedRatings.reduce((sum: number, r: any) => sum + (r.partner_rating || 0), 0) / formattedRatings.length
-      : 0;
-    
-    return res.json({
-      ratings: formattedRatings,
-      average_rating: Math.round(avgRating * 10) / 10
-    });
+    try {
+      const ratings = await ServiceOrder.find({
+        assigned_engineer_id: userId,
+        status: 'completed',
+        partner_rating: { $exists: true, $ne: null }
+      })
+      .sort({ created_at: -1 })
+      .lean();
+      
+      const formattedRatings = (ratings || []).map((order: any) => {
+        try {
+          let id: number = Date.now();
+          try {
+            if (order._id) {
+              const idStr = String(order._id);
+              if (idStr.length >= 8) {
+                const parsed = parseInt(idStr.slice(-8), 16);
+                if (!isNaN(parsed)) {
+                  id = parsed;
+                }
+              }
+            }
+          } catch {
+            id = Date.now();
+          }
+          
+          let created_at: string = new Date().toISOString();
+          try {
+            if (order.created_at) {
+              if (order.created_at instanceof Date) {
+                created_at = order.created_at.toISOString();
+              } else {
+                const date = new Date(order.created_at);
+                if (!isNaN(date.getTime())) {
+                  created_at = date.toISOString();
+                }
+              }
+            }
+          } catch {
+            created_at = new Date().toISOString();
+          }
+          
+          return {
+            id: id,
+            patient_name: String(order.patient_name || 'Anonymous'),
+            service_type: String(order.service_type || 'Service'),
+            equipment_name: order.equipment_name ? String(order.equipment_name) : null,
+            partner_rating: Number(order.partner_rating) || 0,
+            partner_review: String(order.partner_review || ''),
+            created_at: created_at
+          };
+        } catch (mapError: any) {
+          console.error('Error formatting rating:', mapError?.message);
+          return null;
+        }
+      }).filter((rating: any) => rating !== null);
+      
+      const avgRating = formattedRatings.length > 0
+        ? formattedRatings.reduce((sum: number, r: any) => sum + (Number(r.partner_rating) || 0), 0) / formattedRatings.length
+        : 0;
+      
+      return res.json({
+        ratings: formattedRatings,
+        average_rating: Math.round(avgRating * 10) / 10
+      });
+    } catch (dbError: any) {
+      console.error('Database error fetching ratings:', dbError?.message);
+      return res.json({
+        ratings: [],
+        average_rating: 0
+      });
+    }
   } catch (error: any) {
-    console.error('Get partner ratings error:', error);
-    console.error('Error details:', error?.message, error?.stack);
+    console.error('Get partner ratings error:', error?.message);
+    console.error('Error stack:', error?.stack);
     return res.status(500).json({ 
       error: 'Failed to fetch ratings',
       details: error?.message || 'Unknown error'

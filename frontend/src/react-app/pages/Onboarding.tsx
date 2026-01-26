@@ -84,6 +84,7 @@ export default function Onboarding() {
       const response = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(completeData),
       });
 
@@ -106,6 +107,7 @@ export default function Onboarding() {
       const response = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(completeData),
       });
 

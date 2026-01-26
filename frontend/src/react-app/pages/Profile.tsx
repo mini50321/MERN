@@ -1971,6 +1971,7 @@ function LocationChangeModal({
       const response = await fetch("/api/profile/location-change-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           requested_state: requestedState,
           requested_country: requestedCountry,

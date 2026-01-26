@@ -56,6 +56,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', userRoutes);
+app.use('/api/onboarding', userRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/patient/bookings', bookingRoutes);
 app.use('/api/partner', bookingRoutes);

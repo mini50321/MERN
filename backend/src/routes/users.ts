@@ -458,6 +458,105 @@ router.post('/upload-gst', authMiddleware, documentUpload.single('document'), as
   }
 });
 
+const resumeUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed for resumes'));
+    }
+  }
+});
+
+router.post('/resume', authMiddleware, resumeUpload.single('resume'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No resume file provided' });
+    }
+
+    const file = req.file;
+    
+    if (file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ error: 'Resume must be a PDF file' });
+    }
+
+    const base64File = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    const user = await User.findOneAndUpdate(
+      { user_id: req.user!.user_id },
+      { $set: { resume_url: base64File } },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      resume_url: base64File,
+      message: 'Resume uploaded successfully'
+    });
+  } catch (error: any) {
+    console.error('Upload resume error:', error);
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'Resume file is too large. Maximum size is 5MB.' });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Failed to upload resume' });
+  }
+});
+
+router.get('/resume', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.resume_url) {
+      return res.status(404).json({ error: 'No resume found' });
+    }
+
+    return res.json({
+      success: true,
+      resume_url: user.resume_url
+    });
+  } catch (error: any) {
+    console.error('Get resume error:', error);
+    return res.status(500).json({ error: 'Failed to fetch resume' });
+  }
+});
+
+router.delete('/resume', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOneAndUpdate(
+      { user_id: req.user!.user_id },
+      { $set: { resume_url: null } },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Resume deleted successfully'
+    });
+  } catch (error: any) {
+    console.error('Delete resume error:', error);
+    return res.status(500).json({ error: 'Failed to delete resume' });
+  }
+});
+
 router.get('/specialities', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findOne({ user_id: req.user!.user_id });

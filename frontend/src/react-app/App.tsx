@@ -26,6 +26,7 @@ import AdminDashboard from "@/react-app/pages/AdminDashboard";
 import ServicesPage from "@/react-app/pages/Services";
 import FundraisingPage from "@/react-app/pages/Fundraising";
 import OnboardingPage from "@/react-app/pages/Onboarding";
+import LoginPage from "@/react-app/pages/Login";
 import BusinessDashboardPage from "@/react-app/pages/BusinessDashboard";
 import IndividualDashboardPage from "@/react-app/pages/IndividualDashboard";
 import FreelancerDashboardPage from "@/react-app/pages/FreelancerDashboard";
@@ -45,6 +46,7 @@ import Marketplace from "@/react-app/pages/Marketplace";
 ------------------------------ */
 const appRoutes = [
   { path: "/", element: <HomePage /> },
+  { path: "/login", element: <LoginPage /> },
   { path: "/auth/callback", element: <AuthCallbackPage /> },
   { path: "/onboarding", element: <OnboardingPage /> },
 

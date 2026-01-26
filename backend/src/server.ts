@@ -35,6 +35,8 @@ import pricingRoutes from './routes/pricing.js';
 import notificationsRoutes from './routes/notifications.js';
 import specialitiesRoutes from './routes/specialities.js';
 import businessRoutes from './routes/business.js';
+import chatRoutes from './routes/chat.js';
+import contactRequestsRoutes from './routes/contactRequests.js';
 
 dotenv.config();
 
@@ -95,6 +97,8 @@ app.use('/api', pricingRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/specialities', specialitiesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/contact-requests', contactRequestsRoutes);
 
 
 const projectRoot = path.resolve(__dirname, '../..');

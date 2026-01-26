@@ -46,12 +46,22 @@ router.get('/', async (_req, res: Response) => {
   }
 });
 
-router.get('/business', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const products = await BusinessProduct.find({ business_user_id: req.user!.user_id })
+    const userId = req.user!.user_id;
+    console.log('Fetching business products for user:', userId);
+    
+    const products = await BusinessProduct.find({ business_user_id: userId })
       .sort({ created_at: -1 });
     
-    return res.json(products);
+    console.log(`Found ${products.length} products for user ${userId}`);
+    
+    const formattedProducts = products.map(product => ({
+      ...product.toObject(),
+      id: product._id.toString()
+    }));
+    
+    return res.json(formattedProducts);
   } catch (error) {
     console.error('Get business products error:', error);
     return res.status(500).json({ error: 'Failed to fetch business products' });
@@ -60,24 +70,40 @@ router.get('/business', authMiddleware, async (req: AuthRequest, res: Response) 
 
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const userId = req.user!.user_id;
+    console.log('Creating product for user:', userId);
+    console.log('Product data:', JSON.stringify(req.body));
+    
     const product = await BusinessProduct.create({
-      business_user_id: req.user!.user_id,
+      business_user_id: userId,
       name: req.body.name,
       description: req.body.description || null,
       category: req.body.category || null,
       manufacturer: req.body.manufacturer || null,
       model_number: req.body.model_number || null,
       specifications: req.body.specifications || null,
-      dealer_price: req.body.dealer_price || null,
-      customer_price: req.body.customer_price || null,
+      dealer_price: req.body.dealer_price ? Number(req.body.dealer_price) : null,
+      customer_price: req.body.customer_price ? Number(req.body.customer_price) : null,
       currency: req.body.currency || "INR",
       is_active: true
     });
 
-    return res.status(201).json({ id: product._id, success: true });
-  } catch (error) {
+    console.log('Product created successfully:', product._id.toString());
+    
+    const productObj = product.toObject();
+    return res.status(201).json({ 
+      ...productObj,
+      id: product._id.toString(),
+      success: true 
+    });
+  } catch (error: any) {
     console.error('Create product error:', error);
-    return res.status(500).json({ error: 'Failed to create product' });
+    console.error('Error details:', error?.message);
+    console.error('Stack trace:', error?.stack);
+    return res.status(500).json({ 
+      error: 'Failed to create product',
+      details: error?.message || 'Unknown error'
+    });
   }
 });
 
@@ -117,36 +143,80 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
     const userId = req.user!.user_id;
     const mongoose = await import('mongoose');
     
-    console.log('Update product - productId:', productId, 'userId:', userId);
+    console.log('Update product - productId:', productId, 'userId:', userId, 'body:', JSON.stringify(req.body));
+    
+    const updateData: any = {};
+    
+    if (req.body.name !== undefined) updateData.name = String(req.body.name);
+    if (req.body.description !== undefined) updateData.description = req.body.description ? String(req.body.description) : null;
+    if (req.body.category !== undefined) updateData.category = req.body.category ? String(req.body.category) : null;
+    if (req.body.manufacturer !== undefined) updateData.manufacturer = req.body.manufacturer ? String(req.body.manufacturer) : null;
+    if (req.body.model_number !== undefined) updateData.model_number = req.body.model_number ? String(req.body.model_number) : null;
+    if (req.body.specifications !== undefined) updateData.specifications = req.body.specifications ? String(req.body.specifications) : null;
+    if (req.body.dealer_price !== undefined && req.body.dealer_price !== '') {
+      updateData.dealer_price = Number(req.body.dealer_price);
+    } else if (req.body.dealer_price === '') {
+      updateData.dealer_price = null;
+    }
+    if (req.body.customer_price !== undefined && req.body.customer_price !== '') {
+      updateData.customer_price = Number(req.body.customer_price);
+    } else if (req.body.customer_price === '') {
+      updateData.customer_price = null;
+    }
+    if (req.body.currency !== undefined) updateData.currency = String(req.body.currency || "INR");
+    if (req.body.is_active !== undefined) updateData.is_active = Boolean(req.body.is_active);
     
     let product;
+    
     if (mongoose.default.Types.ObjectId.isValid(productId)) {
       product = await BusinessProduct.findOneAndUpdate(
         { 
           _id: new mongoose.default.Types.ObjectId(productId),
           business_user_id: userId 
         },
-        { $set: req.body },
+        { $set: updateData },
         { new: true, runValidators: true }
       );
     } else {
-      product = await BusinessProduct.findOneAndUpdate(
-        { 
-          _id: productId,
-          business_user_id: userId 
-        },
-        { $set: req.body },
-        { new: true, runValidators: true }
-      );
+      const allProducts = await BusinessProduct.find({ business_user_id: userId });
+      const numericId = parseInt(productId);
+      
+      let foundProduct = null;
+      
+      if (!isNaN(numericId)) {
+        foundProduct = allProducts.find((p: any) => {
+          const objIdStr = p._id.toString();
+          const lastDigits = objIdStr.slice(-8);
+          const lastDigitsNum = parseInt(lastDigits, 16);
+          return lastDigitsNum === numericId || objIdStr.includes(productId);
+        });
+      }
+      
+      if (!foundProduct) {
+        foundProduct = allProducts.find((p: any) => p._id.toString().includes(productId));
+      }
+      
+      if (foundProduct) {
+        product = await BusinessProduct.findOneAndUpdate(
+          { _id: foundProduct._id, business_user_id: userId },
+          { $set: updateData },
+          { new: true, runValidators: true }
+        );
+      }
     }
 
     if (!product) {
-      console.log('Product not found for update');
+      console.log('Product not found for update - productId:', productId, 'userId:', userId);
       return res.status(404).json({ error: 'Product not found' });
     }
 
     console.log('Product updated successfully');
-    return res.json({ product, success: true });
+    const productObj = product.toObject();
+    return res.json({ 
+      ...productObj,
+      id: productObj._id?.toString() || productId,
+      success: true 
+    });
   } catch (error: any) {
     console.error('Update product error:', error);
     console.error('Error details:', error?.message);

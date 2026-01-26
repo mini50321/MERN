@@ -1,0 +1,295 @@
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import { useAuth } from "@getmocha/users-service/react";
+import { X, Loader2, Phone, Lock, ArrowRight } from "lucide-react";
+
+export default function Login() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const method = searchParams.get("method") || "phone";
+  
+  const [step, setStep] = useState<"phone" | "otp">(method === "phone" ? "phone" : "phone");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      const profile = (user as any).profile;
+      if (profile?.onboarding_completed) {
+        navigate("/dashboard");
+      } else {
+        navigate("/onboarding");
+      }
+    }
+  }, [user, navigate]);
+
+  const startResendTimer = () => {
+    setResendTimer(60);
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      setError("Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ phone_number: phoneNumber }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setStep("otp");
+        startResendTimer();
+        
+        if (data.development_otp) {
+          console.log(`🔐 Development OTP: ${data.development_otp}`);
+          alert(`Development Mode: Your OTP is ${data.development_otp}\n\nCheck the browser console for details.`);
+        }
+      } else {
+        setError(data.error || "Failed to send OTP. Please try again.");
+      }
+    } catch (err) {
+      console.error("OTP send error:", err);
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (otp.length !== 6) {
+      setError("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          phone_number: phoneNumber,
+          otp: otp,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        window.location.href = "/";
+      } else {
+        setError(data.error || "Invalid OTP. Please try again.");
+      }
+    } catch (err) {
+      console.error("OTP verify error:", err);
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (resendTimer > 0) return;
+    
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ phone_number: phoneNumber }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        startResendTimer();
+        if (data.development_otp) {
+          console.log(`🔐 Development OTP: ${data.development_otp}`);
+          alert(`Development Mode: Your OTP is ${data.development_otp}`);
+        }
+      } else {
+        setError(data.error || "Failed to resend OTP. Please try again.");
+      }
+    } catch (err) {
+      console.error("OTP resend error:", err);
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Sign In</h1>
+            <button
+              onClick={() => navigate("/")}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {step === "phone" ? (
+            <form onSubmit={handleSendOTP} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Phone className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter your 10-digit mobile number"
+                    maxLength={10}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  We'll send you a 6-digit OTP to verify your number
+                </p>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading || phoneNumber.length !== 10}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  <>
+                    Send OTP
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOTP} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter OTP
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Enter 6-digit OTP"
+                    maxLength={6}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-2xl tracking-widest"
+                    required
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500 text-center">
+                  OTP sent to +91 {phoneNumber}
+                </p>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading || otp.length !== 6}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    Verify OTP
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleResendOTP}
+                  disabled={resendTimer > 0 || isLoading}
+                  className="text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("phone");
+                  setOtp("");
+                  setError("");
+                }}
+                className="w-full text-sm text-gray-600 hover:text-gray-800"
+              >
+                ← Change phone number
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

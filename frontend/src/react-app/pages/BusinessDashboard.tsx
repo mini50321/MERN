@@ -10,16 +10,16 @@ import {
 } from "lucide-react";
 
 interface Product {
-  id: number;
+  id: number | string;
   name: string;
   description: string;
   category: string;
   manufacturer: string;
   model_number: string;
-  dealer_price: number;
-  customer_price: number;
+  dealer_price: number | null;
+  customer_price: number | null;
   currency: string;
-  is_active: number;
+  is_active: boolean | number;
   images: any[];
   catalogs: any[];
 }
@@ -90,13 +90,20 @@ export default function BusinessDashboard() {
     setIsLoading(true);
     try {
       const [productsRes, territoriesRes, engineersRes, dealersRes] = await Promise.all([
-        fetch("/api/business/products"),
-        fetch("/api/business/territories"),
-        fetch("/api/business/engineers"),
-        fetch("/api/business/dealers"),
+        fetch("/api/business/products", { credentials: "include" }),
+        fetch("/api/business/territories", { credentials: "include" }),
+        fetch("/api/business/engineers", { credentials: "include" }),
+        fetch("/api/business/dealers", { credentials: "include" }),
       ]);
 
-      if (productsRes.ok) setProducts(await productsRes.json());
+      if (productsRes.ok) {
+        const productsData = await productsRes.json();
+        const formattedProducts = productsData.map((p: any) => ({
+          ...p,
+          id: p.id || p._id?.toString() || p._id
+        }));
+        setProducts(formattedProducts);
+      }
       if (territoriesRes.ok) setTerritories(await territoriesRes.json());
       if (engineersRes.ok) setEngineers(await engineersRes.json());
       if (dealersRes.ok) setDealers(await dealersRes.json());
@@ -107,10 +114,13 @@ export default function BusinessDashboard() {
     }
   };
 
-  const handleDeleteProduct = async (id: number) => {
+  const handleDeleteProduct = async (id: number | string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
     
-    const response = await fetch(`/api/business/products/${id}`, { method: "DELETE" });
+    const response = await fetch(`/api/business/products/${id}`, { 
+      method: "DELETE",
+      credentials: "include"
+    });
     if (response.ok) {
       setProducts(products.filter(p => p.id !== id));
     }
@@ -138,6 +148,7 @@ export default function BusinessDashboard() {
     const response = await fetch(`/api/business/products/${product.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ ...product, is_active: product.is_active ? 0 : 1 }),
     });
 
@@ -145,6 +156,9 @@ export default function BusinessDashboard() {
       setProducts(products.map(p => 
         p.id === product.id ? { ...p, is_active: p.is_active ? 0 : 1 } : p
       ));
+    } else {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      console.error("Failed to toggle product active:", errorData);
     }
   };
 
@@ -594,8 +608,8 @@ export default function BusinessDashboard() {
             setShowProductModal(false);
             setEditingProduct(null);
           }}
-          onSave={() => {
-            loadData();
+          onSave={async () => {
+            await loadData();
             setShowProductModal(false);
             setEditingProduct(null);
           }}
@@ -663,16 +677,28 @@ function ProductModal({ product, onClose, onSave }: any) {
     const url = product ? `/api/business/products/${product.id}` : "/api/business/products";
     const method = product ? "PUT" : "POST";
 
-    const response = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(formData),
+      });
 
-    if (response.ok) {
-      onSave();
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log("Product saved successfully:", responseData);
+        await onSave();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to save product: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Error saving product:", error);
+      alert("Failed to save product. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   return (

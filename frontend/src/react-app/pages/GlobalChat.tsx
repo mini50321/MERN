@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@getmocha/users-service/react";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
-import { Send, MapPin, Globe, Users, Loader2, Smile, Paperclip, Reply, Trash2, X, FileText, Image as ImageIcon, Film, Phone, Building2, Plus, MessageCircle } from "lucide-react";
+import { Send, MapPin, Globe, Users, Loader2, Smile, Paperclip, Reply, Trash2, X, FileText, Image as ImageIcon, Film, Phone, Building2, Plus, MessageCircle, Edit2 } from "lucide-react";
 
 interface ChatMessage {
   id: number;
@@ -71,6 +71,7 @@ export default function GlobalChat() {
   const [isSending, setIsSending] = useState(false);
   const [userState, setUserState] = useState<string | null>(null);
   const [userCountry, setUserCountry] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<number | null>(null);
@@ -81,6 +82,7 @@ export default function GlobalChat() {
   const [showContactRequestModal, setShowContactRequestModal] = useState(false);
   const [showContactReplyModal, setShowContactReplyModal] = useState(false);
   const [selectedContactRequest, setSelectedContactRequest] = useState<ContactRequest | null>(null);
+  const [editingContactRequest, setEditingContactRequest] = useState<ContactRequest | null>(null);
   const [contactReplies, setContactReplies] = useState<ContactReply[]>([]);
   const [showContactRepliesModal, setShowContactRepliesModal] = useState(false);
   
@@ -146,11 +148,12 @@ export default function GlobalChat() {
 
   const fetchUserLocation = async () => {
     try {
-      const response = await fetch("/api/users/me");
+      const response = await fetch("/api/users/me", { credentials: "include" });
       const data = await response.json();
       setUserState(data.profile?.state || null);
       setUserCountry(data.profile?.country || null);
       setUserProfession(data.profile?.profession || "biomedical_engineer");
+      setCurrentUserId(data.profile?.user_id || null);
     } catch (error) {
       console.error("Error fetching user location:", error);
     }
@@ -169,16 +172,31 @@ export default function GlobalChat() {
   const fetchData = async () => {
     try {
       if (activeView === "chat") {
-        const response = await fetch(`/api/chat/messages?scope=${activeTab}`);
+        const response = await fetch(`/api/chat/messages?scope=${activeTab}`, {
+          credentials: "include"
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch messages: ${response.status}`);
+        }
         const data = await response.json();
-        setMessages(data);
+        setMessages(Array.isArray(data) ? data : []);
       } else {
-        const response = await fetch(`/api/contact-requests?scope=${activeTab}`);
+        const response = await fetch(`/api/contact-requests?scope=${activeTab}`, {
+          credentials: "include"
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch contact requests: ${response.status}`);
+        }
         const data = await response.json();
-        setContactRequests(data);
+        setContactRequests(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
+      if (activeView === "chat") {
+        setMessages([]);
+      } else {
+        setContactRequests([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -201,7 +219,9 @@ export default function GlobalChat() {
 
   const fetchContactReplies = async (requestId: number) => {
     try {
-      const response = await fetch(`/api/contact-requests/${requestId}/replies`);
+      const response = await fetch(`/api/contact-requests/${requestId}/replies`, {
+        credentials: "include"
+      });
       const data = await response.json();
       setContactReplies(data);
     } catch (error) {
@@ -259,6 +279,7 @@ export default function GlobalChat() {
 
       await fetch("/api/chat/messages", {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
       
@@ -278,9 +299,15 @@ export default function GlobalChat() {
     const formData = new FormData(e.currentTarget);
 
     try {
-      const response = await fetch("/api/contact-requests", {
-        method: "POST",
+      const url = editingContactRequest 
+        ? `/api/contact-requests/${editingContactRequest.id}`
+        : "/api/contact-requests";
+      const method = editingContactRequest ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           company_name: formData.get("company_name"),
           hospital_name: formData.get("hospital_name"),
@@ -292,11 +319,15 @@ export default function GlobalChat() {
 
       if (response.ok) {
         setShowContactRequestModal(false);
+        setEditingContactRequest(null);
         setActiveView("contacts");
         await fetchData();
+      } else {
+        alert(`Failed to ${editingContactRequest ? 'update' : 'create'} contact request`);
       }
     } catch (error) {
-      console.error("Error creating contact request:", error);
+      console.error(`Error ${editingContactRequest ? 'updating' : 'creating'} contact request:`, error);
+      alert(`Failed to ${editingContactRequest ? 'update' : 'create'} contact request`);
     }
   };
 
@@ -308,6 +339,7 @@ export default function GlobalChat() {
       const response = await fetch(`/api/contact-requests/${selectedContactRequest!.id}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           contact_name: formData.get("contact_name"),
           contact_phone: formData.get("contact_phone"),
@@ -346,6 +378,7 @@ export default function GlobalChat() {
     try {
       await fetch(`/api/contact-requests/${requestId}`, {
         method: "DELETE",
+        credentials: "include"
       });
       await fetchData();
     } catch (error) {
@@ -449,6 +482,10 @@ export default function GlobalChat() {
 
   const groupMessagesByDate = (messages: ChatMessage[]) => {
     const grouped: { [key: string]: ChatMessage[] } = {};
+    
+    if (!Array.isArray(messages)) {
+      return grouped;
+    }
     
     messages.forEach(msg => {
       const dateKey = getMessageDate(msg.created_at);
@@ -571,7 +608,10 @@ export default function GlobalChat() {
                   </span>
                 </div>
                 <button
-                  onClick={() => setShowContactRequestModal(true)}
+                  onClick={() => {
+                    setEditingContactRequest(null);
+                    setShowContactRequestModal(true);
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -894,7 +934,10 @@ export default function GlobalChat() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No contact requests yet</h3>
                     <p className="text-gray-600 mb-4">Looking for a vendor contact? Request it here!</p>
                     <button
-                      onClick={() => setShowContactRequestModal(true)}
+                      onClick={() => {
+                    setEditingContactRequest(null);
+                    setShowContactRequestModal(true);
+                  }}
                       className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-lg transition-all"
                     >
                       Request Contact
@@ -947,15 +990,31 @@ export default function GlobalChat() {
                               )}
                             </div>
                           </div>
-                          {user?.id === request.user_id && (
-                            <button
-                              onClick={() => handleDeleteContactRequest(request.id)}
-                              className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                              title="Delete request"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                          {(() => {
+                            const userId = currentUserId || (user as any)?.id || (user as any)?.user_id || (user as any)?.profile?.user_id;
+                            const isOwner = userId && request.user_id && String(userId) === String(request.user_id);
+                            return isOwner ? (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingContactRequest(request);
+                                    setShowContactRequestModal(true);
+                                  }}
+                                  className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                  title="Edit request"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteContactRequest(request.id)}
+                                  className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                                  title="Delete request"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
 
                         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
@@ -995,9 +1054,14 @@ export default function GlobalChat() {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-                <h2 className="text-2xl font-bold text-gray-900">Request Contact</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingContactRequest ? "Edit Contact Request" : "Request Contact"}
+                </h2>
                 <button
-                  onClick={() => setShowContactRequestModal(false)}
+                  onClick={() => {
+                    setShowContactRequestModal(false);
+                    setEditingContactRequest(null);
+                  }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="w-6 h-6 text-gray-500" />
@@ -1013,6 +1077,7 @@ export default function GlobalChat() {
                     type="text"
                     name="company_name"
                     required
+                    defaultValue={editingContactRequest?.company_name || ""}
                     placeholder="e.g., Philips Healthcare, GE Healthcare, Siemens Healthineers"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -1025,6 +1090,7 @@ export default function GlobalChat() {
                   <input
                     type="text"
                     name="hospital_name"
+                    defaultValue={editingContactRequest?.hospital_name || ""}
                     placeholder="e.g., Apollo Hospital, AIIMS"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -1037,6 +1103,7 @@ export default function GlobalChat() {
                   <input
                     type="text"
                     name="location"
+                    defaultValue={editingContactRequest?.location || ""}
                     placeholder="e.g., Mumbai, Delhi NCR, Bangalore"
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -1049,6 +1116,7 @@ export default function GlobalChat() {
                   <textarea
                     name="description"
                     rows={4}
+                    defaultValue={editingContactRequest?.description || ""}
                     placeholder="Specify what you need - service engineer contact, sales representative, spare parts supplier, etc."
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
@@ -1058,7 +1126,7 @@ export default function GlobalChat() {
                   type="submit"
                   className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-lg transition-all font-medium"
                 >
-                  Post Request
+                  {editingContactRequest ? "Update Request" : "Post Request"}
                 </button>
               </form>
             </div>

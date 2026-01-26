@@ -35,9 +35,10 @@ export default function EditJobModal({ job, isOpen, onClose, onSuccess }: EditJo
     setError("");
 
     try {
-      const response = await fetch(`/api/admin/jobs/${job.id}`, {
+      const response = await fetch(`/api/jobs/${job.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim(),

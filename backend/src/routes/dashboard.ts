@@ -1,4 +1,4 @@
-import express, { type Request, type Response } from 'express';
+import express, { type Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();

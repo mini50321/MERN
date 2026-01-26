@@ -36,6 +36,9 @@ export interface IUser extends Document {
   onboarding_completed: boolean;
   is_admin?: boolean;
   role?: string;
+  push_notifications?: boolean;
+  email_notifications?: boolean;
+  sms_notifications?: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -101,6 +104,18 @@ const UserSchema = new Schema<IUser>({
     default: false
   },
   role: String,
+  push_notifications: {
+    type: Boolean,
+    default: true
+  },
+  email_notifications: {
+    type: Boolean,
+    default: true
+  },
+  sms_notifications: {
+    type: Boolean,
+    default: false
+  },
   created_at: {
     type: Date,
     default: Date.now

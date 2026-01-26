@@ -369,7 +369,7 @@ router.get('/dynamic-pricing/night-duty', authMiddleware, async (_req: AuthReque
   }
 });
 
-router.put('/dynamic-pricing/night-duty', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/dynamic-pricing/night-duty', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {
@@ -391,7 +391,7 @@ router.get('/dynamic-pricing/emergency', authMiddleware, async (_req: AuthReques
   }
 });
 
-router.put('/dynamic-pricing/emergency', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/dynamic-pricing/emergency', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {

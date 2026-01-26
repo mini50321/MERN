@@ -613,7 +613,7 @@ router.get('/products', authMiddleware, async (req: AuthRequest, res: Response) 
   }
 });
 
-router.get('/products/:id/brands', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/products/:id/brands', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
   } catch (error: any) {

@@ -212,7 +212,7 @@ router.post('/messages/:id/reply', authMiddleware, async (req: AuthRequest, res:
   }
 });
 
-router.post('/messages/:id/react', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/messages/:id/react', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true, message: 'Reaction feature not yet implemented' });
   } catch (error: any) {

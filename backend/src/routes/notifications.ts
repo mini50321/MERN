@@ -20,7 +20,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/:id/read', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.post('/:id/read', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {
@@ -29,7 +29,7 @@ router.post('/:id/read', authMiddleware, async (req: AuthRequest, res: Response)
   }
 });
 
-router.get('/preferences', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/preferences', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({
       email_notifications: true,
@@ -42,7 +42,7 @@ router.get('/preferences', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
-router.put('/preferences', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.put('/preferences', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({ success: true });
   } catch (error) {

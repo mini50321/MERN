@@ -246,50 +246,80 @@ router.post('/:courseId/certificate', authMiddleware, async (req: AuthRequest, r
 });
 
 router.post('/upload-video', authMiddleware, upload.single('video'), handleMulterError, async (req: AuthRequest, res: Response) => {
+  let responseSent = false;
+  
+  const sendError = (status: number, message: string, details?: string): void => {
+    if (!responseSent) {
+      responseSent = true;
+      res.status(status).json({ 
+        error: message,
+        ...(details && { details })
+      });
+    }
+  };
+
+  const sendSuccess = (data: any): void => {
+    if (!responseSent) {
+      responseSent = true;
+      res.json(data);
+    }
+  };
+
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No video file provided' });
+      sendError(400, 'No video file provided');
+      return;
     }
 
     const file = req.file;
     
     if (!file.mimetype.startsWith('video/')) {
-      return res.status(400).json({ error: 'File must be a video' });
+      sendError(400, 'File must be a video');
+      return;
     }
 
     const maxSize = 20 * 1024 * 1024;
     if (file.size > maxSize) {
-      return res.status(413).json({ 
-        error: `Video file is too large. Maximum size is ${maxSize / (1024 * 1024)}MB. Please compress your video or use a smaller file.` 
-      });
+      sendError(413, `Video file is too large. Maximum size is ${maxSize / (1024 * 1024)}MB. Please compress your video or use a smaller file.`);
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      console.warn(`Large video file detected: ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
     }
 
     let base64Video: string;
     try {
-      const chunkSize = 1024 * 1024;
+      const chunkSize = 512 * 1024;
       const chunks: string[] = [];
+      const totalChunks = Math.ceil(file.buffer.length / chunkSize);
+      
+      console.log(`Processing video: ${(file.size / (1024 * 1024)).toFixed(2)}MB in ${totalChunks} chunks`);
       
       for (let i = 0; i < file.buffer.length; i += chunkSize) {
         const chunk = file.buffer.slice(i, i + chunkSize);
         chunks.push(chunk.toString('base64'));
+        
+        if (chunks.length % 10 === 0) {
+          console.log(`Processed ${chunks.length}/${totalChunks} chunks`);
+        }
       }
       
+      console.log('Joining base64 chunks...');
       base64Video = `data:${file.mimetype};base64,${chunks.join('')}`;
+      console.log('Base64 conversion complete');
     } catch (bufferError: any) {
       console.error('Error converting video to base64:', bufferError);
       console.error('Buffer error details:', bufferError?.message, bufferError?.stack);
-      if (bufferError.message?.includes('offset') || bufferError.message?.includes('RangeError') || bufferError.name === 'RangeError') {
-        return res.status(413).json({ 
-          error: 'Video file is too large to process. Please use a video file smaller than 20MB, or compress your video file.' 
-        });
+      if (bufferError.message?.includes('offset') || bufferError.message?.includes('RangeError') || bufferError.name === 'RangeError' || bufferError.name === 'TypeError') {
+        sendError(413, 'Video file is too large to process. Please use a video file smaller than 20MB, or compress your video file.');
+        return;
       }
-      return res.status(500).json({ 
-        error: 'Failed to process video',
-        details: bufferError?.message || 'Unknown error during video conversion'
-      });
+      sendError(500, 'Failed to process video', bufferError?.message || 'Unknown error during video conversion');
+      return;
     }
 
-    return res.json({
+    sendSuccess({
       success: true,
       video_url: base64Video,
       message: 'Video uploaded successfully'
@@ -297,10 +327,7 @@ router.post('/upload-video', authMiddleware, upload.single('video'), handleMulte
   } catch (error: any) {
     console.error('Upload course video error:', error);
     console.error('Error details:', error?.message, error?.stack);
-    return res.status(500).json({ 
-      error: 'Failed to upload video',
-      details: error?.message || 'Unknown error'
-    });
+    sendError(500, 'Failed to upload video', error?.message || 'Unknown error');
   }
 });
 

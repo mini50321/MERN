@@ -1,4 +1,4 @@
-import express, { type Request, type Response } from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { Course } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
@@ -28,13 +28,30 @@ const upload = multer({
     fileSize: 20 * 1024 * 1024
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('video/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only video files are allowed'));
+    try {
+      if (file.mimetype.startsWith('video/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only video files are allowed'));
+      }
+    } catch (error) {
+      cb(error as Error);
     }
   }
 });
+
+const handleMulterError = (err: any, _req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'Video file is too large. Maximum size is 20MB.' });
+    }
+    return res.status(400).json({ error: err.message });
+  }
+  if (err) {
+    return res.status(400).json({ error: err.message || 'File upload error' });
+  }
+  return next();
+};
 
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -228,7 +245,7 @@ router.post('/:courseId/certificate', authMiddleware, async (req: AuthRequest, r
   }
 });
 
-router.post('/upload-video', authMiddleware, upload.single('video'), async (req: AuthRequest, res: Response) => {
+router.post('/upload-video', authMiddleware, upload.single('video'), handleMulterError, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No video file provided' });
@@ -240,56 +257,50 @@ router.post('/upload-video', authMiddleware, upload.single('video'), async (req:
       return res.status(400).json({ error: 'File must be a video' });
     }
 
+    const maxSize = 20 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return res.status(413).json({ 
+        error: `Video file is too large. Maximum size is ${maxSize / (1024 * 1024)}MB. Please compress your video or use a smaller file.` 
+      });
+    }
+
+    let base64Video: string;
     try {
-      const maxSize = 20 * 1024 * 1024;
-      if (file.size > maxSize) {
+      const chunkSize = 1024 * 1024;
+      const chunks: string[] = [];
+      
+      for (let i = 0; i < file.buffer.length; i += chunkSize) {
+        const chunk = file.buffer.slice(i, i + chunkSize);
+        chunks.push(chunk.toString('base64'));
+      }
+      
+      base64Video = `data:${file.mimetype};base64,${chunks.join('')}`;
+    } catch (bufferError: any) {
+      console.error('Error converting video to base64:', bufferError);
+      console.error('Buffer error details:', bufferError?.message, bufferError?.stack);
+      if (bufferError.message?.includes('offset') || bufferError.message?.includes('RangeError') || bufferError.name === 'RangeError') {
         return res.status(413).json({ 
-          error: `Video file is too large. Maximum size is ${maxSize / (1024 * 1024)}MB. Please compress your video or use a smaller file.` 
+          error: 'Video file is too large to process. Please use a video file smaller than 20MB, or compress your video file.' 
         });
       }
-
-      let base64Video: string;
-      try {
-        const chunkSize = 1024 * 1024;
-        const chunks: string[] = [];
-        
-        for (let i = 0; i < file.buffer.length; i += chunkSize) {
-          const chunk = file.buffer.slice(i, i + chunkSize);
-          chunks.push(chunk.toString('base64'));
-        }
-        
-        base64Video = `data:${file.mimetype};base64,${chunks.join('')}`;
-      } catch (bufferError: any) {
-        console.error('Error converting video to base64:', bufferError);
-        if (bufferError.message?.includes('offset') || bufferError.message?.includes('RangeError')) {
-          return res.status(413).json({ 
-            error: 'Video file is too large to process. Please use a video file smaller than 20MB, or compress your video file.' 
-          });
-        }
-        throw bufferError;
-      }
-
-      return res.json({
-        success: true,
-        video_url: base64Video,
-        message: 'Video uploaded successfully'
-      });
-    } catch (bufferError: any) {
-      console.error('Error processing video:', bufferError);
       return res.status(500).json({ 
         error: 'Failed to process video',
-        details: bufferError?.message || 'Unknown error'
+        details: bufferError?.message || 'Unknown error during video conversion'
       });
     }
+
+    return res.json({
+      success: true,
+      video_url: base64Video,
+      message: 'Video uploaded successfully'
+    });
   } catch (error: any) {
-    if (error instanceof multer.MulterError) {
-      if (error.code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ error: 'Video file is too large. Maximum size is 20MB.' });
-      }
-      return res.status(400).json({ error: error.message });
-    }
     console.error('Upload course video error:', error);
-    return res.status(500).json({ error: 'Failed to upload video' });
+    console.error('Error details:', error?.message, error?.stack);
+    return res.status(500).json({ 
+      error: 'Failed to upload video',
+      details: error?.message || 'Unknown error'
+    });
   }
 });
 

@@ -13,16 +13,17 @@ You can see the **sidebar on the left** with all the menu items. Here's how to p
 Click any of these in the sidebar:
 
 1. **News** → News Posts CRUD
-2. **$ Earn** → Services CRUD
+2. **$ Earn** → Service Orders Management (Accept/Decline/Complete orders)
 3. **Jobs** → Job Postings CRUD
 4. **Learning** → Courses CRUD
 5. **Exhibitions** → Exhibition Listings CRUD
 6. **Manuals** → Service Manuals CRUD
+7. **Fundraising** → Fundraisers CRUD
 
 ### Option 2: Use Quick Access Grid (Center)
 
 Click any button in the "Quick Access" section:
-- **Earn** → Services CRUD
+- **Earn** → Service Orders Management (See `EARN_CRUD_OPERATIONS.md` for details)
 - **Manuals** → Manuals CRUD
 - **Jobs** → Jobs CRUD
 - **Industry News** → News CRUD

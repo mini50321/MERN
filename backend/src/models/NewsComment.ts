@@ -4,6 +4,7 @@ export interface INewsComment extends Document {
   news_id: string;
   user_id: string;
   comment: string;
+  likes: string[];
   created_at: Date;
   updated_at: Date;
 }
@@ -22,6 +23,10 @@ const NewsCommentSchema = new Schema<INewsComment>({
   comment: {
     type: String,
     required: true
+  },
+  likes: {
+    type: [String],
+    default: []
   },
   created_at: {
     type: Date,

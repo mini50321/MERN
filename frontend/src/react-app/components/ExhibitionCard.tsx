@@ -78,6 +78,15 @@ export default function ExhibitionCard({
   }, []);
 
   useEffect(() => {
+    setIsLiked(exhibition.user_liked);
+    setLikesCount(exhibition.likes_count);
+    setIsSaved(exhibition.user_saved);
+    setUserResponse(exhibition.user_response);
+    setGoingCount(exhibition.going_count || 0);
+    setNotGoingCount(exhibition.not_going_count || 0);
+  }, [exhibition.user_liked, exhibition.likes_count, exhibition.user_saved, exhibition.user_response, exhibition.going_count, exhibition.not_going_count]);
+
+  useEffect(() => {
     if (!viewTracked && cardRef.current) {
       const observer = new IntersectionObserver(
         (entries) => {

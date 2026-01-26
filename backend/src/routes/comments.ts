@@ -1,12 +1,47 @@
 import express, { type Request, type Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
-import { CommentReply, User } from '../models/index.js';
+import { CommentReply, User, NewsComment } from '../models/index.js';
 
 const router = express.Router();
 
-router.post('/:id/like', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    return res.json({ success: true, liked: true });
+    const commentId = req.params.id;
+    const userId = req.user!.user_id;
+
+    const numericCommentId = typeof commentId === 'string' ? parseInt(commentId, 10) : commentId;
+    const allComments = await NewsComment.find().lean();
+    const matchingComment = allComments.find(c => {
+      const commentIdNum = parseInt(c._id.toString().slice(-8), 16);
+      return commentIdNum === numericCommentId;
+    });
+
+    if (!matchingComment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const comment = await NewsComment.findById(matchingComment._id);
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const likesArray = comment.likes || [];
+    const likedIndex = likesArray.indexOf(userId);
+
+    if (likedIndex === -1) {
+      likesArray.push(userId);
+    } else {
+      likesArray.splice(likedIndex, 1);
+    }
+
+    comment.likes = likesArray;
+    await comment.save();
+
+    return res.json({ 
+      success: true, 
+      liked: likedIndex === -1,
+      likes_count: likesArray.length
+    });
   } catch (error) {
     console.error('Like comment error:', error);
     return res.status(500).json({ error: 'Failed to like comment' });

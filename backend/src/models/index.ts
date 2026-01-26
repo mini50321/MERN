@@ -30,6 +30,8 @@ export { ExhibitionComment } from './ExhibitionComment.js';
 export type { IExhibitionComment } from './ExhibitionComment.js';
 export { ExhibitionCommentReply } from './ExhibitionCommentReply.js';
 export type { IExhibitionCommentReply } from './ExhibitionCommentReply.js';
+export { ExhibitionResponse } from './ExhibitionResponse.js';
+export type { IExhibitionResponse } from './ExhibitionResponse.js';
 export { Course } from './Course.js';
 export type { ICourse } from './Course.js';
 export { Fundraiser } from './Fundraiser.js';

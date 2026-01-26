@@ -375,6 +375,33 @@ export default function LearningCenter() {
           />
         )}
 
+        {editingCourse && (
+          <EditCourseModal
+            course={editingCourse}
+            isOpen={!!editingCourse}
+            onClose={() => setEditingCourse(null)}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+
+        <DeleteConfirmModal
+          isOpen={deletingCourseId !== null}
+          onClose={() => {
+            if (!isDeleting) {
+              setDeletingCourseId(null);
+            }
+          }}
+          onConfirm={async () => {
+            if (deletingCourseId) {
+              await handleDelete(deletingCourseId);
+            }
+          }}
+          title="Delete Course"
+          message="Are you sure you want to delete this course? This action cannot be undone."
+          itemName={courses.find(c => c.id === deletingCourseId)?.title}
+          isDeleting={isDeleting}
+        />
+
         {showSuccessToast && (
           <div className="fixed bottom-24 lg:bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slide-up z-50">
             <Check className="w-5 h-5" />

@@ -100,13 +100,31 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
       .lean();
 
     const { CommentReply } = await import('../models/index.js');
+    const jwt = await import('jsonwebtoken');
     
     const newsIdNum = typeof req.params.id === 'string' ? parseInt(req.params.id, 10) : req.params.id;
+    
+    let currentUserId: string | null = null;
+    try {
+      const token = (req.headers.authorization?.replace('Bearer ', '') || 
+                    (req as any).cookies?.mavy_session);
+      if (token) {
+        const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+        const decoded = jwt.verify(token, jwtSecret) as { user_id: string };
+        currentUserId = decoded.user_id;
+      }
+    } catch {
+      currentUserId = null;
+    }
     
     const commentsWithUser = await Promise.all(comments.map(async (comment) => {
       const user = await User.findOne({ user_id: comment.user_id }).lean();
       const replyCount = await CommentReply.countDocuments({ comment_id: comment._id.toString() });
       const commentIdNum = parseInt(comment._id.toString().slice(-8), 16) || Date.now();
+      
+      const likesArray = comment.likes || [];
+      const likesCount = likesArray.length;
+      const userLiked = currentUserId ? likesArray.includes(currentUserId) : false;
       
       return {
         id: commentIdNum,
@@ -117,9 +135,9 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
         profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
         created_at: comment.created_at.toISOString(),
         updated_at: comment.updated_at.toISOString(),
-        likes_count: 0,
+        likes_count: likesCount,
         replies_count: replyCount || 0,
-        user_liked: false
+        user_liked: userLiked
       };
     }));
 

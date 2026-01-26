@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import multer from 'multer';
-import { Exhibition, ExhibitionComment, ExhibitionCommentReply, User } from '../models/index.js';
+import { Exhibition, ExhibitionComment, ExhibitionCommentReply, ExhibitionResponse, User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -34,9 +34,53 @@ router.get('/', async (req: Request, res: Response) => {
       .limit(50)
       .lean();
     
-    const formattedExhibitions = exhibitions.map(exhibition => ({
-      ...exhibition,
-      id: exhibition._id.toString()
+    const jwt = await import('jsonwebtoken');
+    
+    let currentUserId: string | null = null;
+    try {
+      const token = (req.headers.authorization?.replace('Bearer ', '') || 
+                    (req as any).cookies?.mavy_session);
+      if (token) {
+        const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+        const decoded = jwt.verify(token, jwtSecret) as { user_id: string };
+        currentUserId = decoded.user_id;
+      }
+    } catch {
+      currentUserId = null;
+    }
+    
+    const formattedExhibitions = await Promise.all(exhibitions.map(async (exhibition) => {
+      const exhibitionId = exhibition._id.toString();
+      const numericId = parseInt(exhibitionId.slice(-8), 16) || Date.now();
+      
+      const goingCount = await ExhibitionResponse.countDocuments({
+        exhibition_id: exhibitionId,
+        response_type: 'going'
+      });
+      
+      const notGoingCount = await ExhibitionResponse.countDocuments({
+        exhibition_id: exhibitionId,
+        response_type: 'not_going'
+      });
+      
+      let userResponse: 'going' | 'not_going' | null = null;
+      if (currentUserId) {
+        const userResponseDoc = await ExhibitionResponse.findOne({
+          exhibition_id: exhibitionId,
+          user_id: currentUserId
+        }).lean();
+        if (userResponseDoc) {
+          userResponse = userResponseDoc.response_type as 'going' | 'not_going';
+        }
+      }
+      
+      return {
+        ...exhibition,
+        id: numericId,
+        going_count: goingCount,
+        not_going_count: notGoingCount,
+        user_response: userResponse
+      };
     }));
     
     return res.json(formattedExhibitions);
@@ -263,6 +307,83 @@ router.post('/:id/response', authMiddleware, async (req: AuthRequest, res: Respo
   try {
     const { response_type } = req.body;
     const exhibitionId = req.params.id;
+    const userId = req.user!.user_id;
+    
+    if (!response_type || (response_type !== 'going' && response_type !== 'not_going')) {
+      return res.status(400).json({ error: 'Invalid response_type. Must be "going" or "not_going"' });
+    }
+    
+    let exhibition;
+    let actualExhibitionId: string | null = null;
+    
+    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(exhibitionId);
+      if (exhibition) {
+        actualExhibitionId = exhibition._id.toString();
+      }
+    } else {
+      const allExhibitions = await Exhibition.find().lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(exhibitionId, 10);
+      });
+      if (found) {
+        actualExhibitionId = found._id.toString();
+        exhibition = await Exhibition.findById(found._id);
+      }
+    }
+    
+    if (!exhibition || !actualExhibitionId) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+    
+    const existingResponse = await ExhibitionResponse.findOne({
+      exhibition_id: actualExhibitionId,
+      user_id: userId
+    });
+    
+    if (existingResponse) {
+      if (existingResponse.response_type === response_type) {
+        await ExhibitionResponse.findByIdAndDelete(existingResponse._id);
+        return res.json({ 
+          success: true, 
+          message: 'Response removed',
+          response_type: null
+        });
+      } else {
+        existingResponse.response_type = response_type;
+        await existingResponse.save();
+        return res.json({ 
+          success: true, 
+          message: `Response updated to ${response_type}`,
+          response_type: response_type
+        });
+      }
+    } else {
+      await ExhibitionResponse.create({
+        exhibition_id: actualExhibitionId,
+        user_id: userId,
+        response_type: response_type
+      });
+      return res.json({ 
+        success: true, 
+        message: `Response ${response_type} recorded`,
+        response_type: response_type
+      });
+    }
+  } catch (error: any) {
+    if (error.code === 11000) {
+      return res.status(400).json({ error: 'Response already exists' });
+    }
+    console.error('Response exhibition error:', error);
+    console.error('Error details:', error.message, error.stack);
+    return res.status(500).json({ error: 'Failed to record response', details: error.message });
+  }
+});
+
+router.post('/:id/view', async (req: Request, res: Response) => {
+  try {
+    const exhibitionId = req.params.id;
     let exhibition;
     
     if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
@@ -278,19 +399,6 @@ router.post('/:id/response', authMiddleware, async (req: AuthRequest, res: Respo
       }
     }
     
-    if (!exhibition) {
-      return res.status(404).json({ error: 'Exhibition not found' });
-    }
-    return res.json({ success: true, message: `Response ${response_type} recorded` });
-  } catch (error) {
-    console.error('Response exhibition error:', error);
-    return res.status(500).json({ error: 'Failed to record response' });
-  }
-});
-
-router.post('/:id/view', async (req: Request, res: Response) => {
-  try {
-    const exhibition = await Exhibition.findById(req.params.id);
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
     }
@@ -351,10 +459,29 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
       .sort({ created_at: -1 })
       .lean();
 
+    const jwt = await import('jsonwebtoken');
+    
+    let currentUserId: string | null = null;
+    try {
+      const token = (req.headers.authorization?.replace('Bearer ', '') || 
+                    (req as any).cookies?.mavy_session);
+      if (token) {
+        const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+        const decoded = jwt.verify(token, jwtSecret) as { user_id: string };
+        currentUserId = decoded.user_id;
+      }
+    } catch {
+      currentUserId = null;
+    }
+
     const commentsWithUser = await Promise.all(comments.map(async (comment) => {
       const user = await User.findOne({ user_id: comment.user_id }).lean();
       const replyCount = await ExhibitionCommentReply.countDocuments({ comment_id: comment._id.toString() });
       const commentIdNum = parseInt(comment._id.toString().slice(-8), 16) || Date.now();
+      
+      const likesArray = comment.likes || [];
+      const likesCount = likesArray.length;
+      const userLiked = currentUserId ? likesArray.includes(currentUserId) : false;
       
       return {
         id: commentIdNum,
@@ -365,9 +492,9 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
         profile_picture_url: (user as any)?.profile?.profile_picture_url || null,
         created_at: comment.created_at.toISOString(),
         updated_at: comment.updated_at.toISOString(),
-        likes_count: 0,
+        likes_count: likesCount,
         replies_count: replyCount || 0,
-        user_liked: false
+        user_liked: userLiked
       };
     }));
 
@@ -434,9 +561,44 @@ router.post('/:id/comment', authMiddleware, async (req: AuthRequest, res: Respon
   }
 });
 
-router.post('/comments/:id/like', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.post('/comments/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    return res.json({ success: true, message: 'Comment liked' });
+    const commentId = req.params.id;
+    const userId = req.user!.user_id;
+
+    const numericCommentId = typeof commentId === 'string' ? parseInt(commentId, 10) : commentId;
+    const allComments = await ExhibitionComment.find().lean();
+    const matchingComment = allComments.find(c => {
+      const commentIdNum = parseInt(c._id.toString().slice(-8), 16);
+      return commentIdNum === numericCommentId;
+    });
+
+    if (!matchingComment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const comment = await ExhibitionComment.findById(matchingComment._id);
+    if (!comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const likesArray = comment.likes || [];
+    const likedIndex = likesArray.indexOf(userId);
+
+    if (likedIndex === -1) {
+      likesArray.push(userId);
+    } else {
+      likesArray.splice(likedIndex, 1);
+    }
+
+    comment.likes = likesArray;
+    await comment.save();
+
+    return res.json({ 
+      success: true, 
+      liked: likedIndex === -1,
+      likes_count: likesArray.length
+    });
   } catch (error) {
     console.error('Like comment error:', error);
     return res.status(500).json({ error: 'Failed to like comment' });

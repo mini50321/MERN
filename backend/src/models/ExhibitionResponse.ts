@@ -1,15 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IExhibitionComment extends Document {
+export interface IExhibitionResponse extends Document {
   exhibition_id: string;
   user_id: string;
-  comment: string;
-  likes: string[];
+  response_type: 'going' | 'not_going';
   created_at: Date;
   updated_at: Date;
 }
 
-const ExhibitionCommentSchema = new Schema<IExhibitionComment>({
+const ExhibitionResponseSchema = new Schema<IExhibitionResponse>({
   exhibition_id: {
     type: String,
     required: true,
@@ -20,13 +19,10 @@ const ExhibitionCommentSchema = new Schema<IExhibitionComment>({
     required: true,
     index: true
   },
-  comment: {
+  response_type: {
     type: String,
+    enum: ['going', 'not_going'],
     required: true
-  },
-  likes: {
-    type: [String],
-    default: []
   },
   created_at: {
     type: Date,
@@ -38,10 +34,12 @@ const ExhibitionCommentSchema = new Schema<IExhibitionComment>({
   }
 });
 
-ExhibitionCommentSchema.pre('save', function(next) {
+ExhibitionResponseSchema.index({ exhibition_id: 1, user_id: 1 }, { unique: true });
+
+ExhibitionResponseSchema.pre('save', function(next) {
   this.updated_at = new Date();
   next();
 });
 
-export const ExhibitionComment = mongoose.model<IExhibitionComment>('ExhibitionComment', ExhibitionCommentSchema);
+export const ExhibitionResponse = mongoose.model<IExhibitionResponse>('ExhibitionResponse', ExhibitionResponseSchema);
 

@@ -4,6 +4,41 @@ import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
+router.get('/tickets', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const tickets = await SupportTicket.find({ user_id: req.user!.user_id })
+      .sort({ created_at: -1 });
+    
+    return res.json(tickets);
+  } catch (error) {
+    console.error('Get support tickets error:', error);
+    return res.status(500).json({ error: 'Failed to fetch support tickets' });
+  }
+});
+
+router.post('/tickets', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.body.subject || !req.body.message) {
+      return res.status(400).json({ error: 'Subject and message are required' });
+    }
+
+    const ticket = await SupportTicket.create({
+      user_id: req.user!.user_id,
+      subject: req.body.subject,
+      message: req.body.message,
+      status: 'open',
+      order_id: req.body.order_id || req.body.booking_id || null,
+      booking_id: req.body.booking_id || req.body.order_id || null,
+      service_type: req.body.service_type || null
+    });
+
+    return res.status(201).json({ id: ticket._id, success: true });
+  } catch (error) {
+    console.error('Create support ticket error:', error);
+    return res.status(500).json({ error: 'Failed to create support ticket' });
+  }
+});
+
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const tickets = await SupportTicket.find({ user_id: req.user!.user_id })
@@ -26,7 +61,10 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       user_id: req.user!.user_id,
       subject: req.body.subject,
       message: req.body.message,
-      status: 'open'
+      status: 'open',
+      order_id: req.body.order_id || req.body.booking_id || null,
+      booking_id: req.body.booking_id || req.body.order_id || null,
+      service_type: req.body.service_type || null
     });
 
     return res.status(201).json({ id: ticket._id, success: true });

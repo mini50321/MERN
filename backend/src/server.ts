@@ -31,6 +31,10 @@ import lessonsRoutes from './routes/lessons.js';
 import fundraisersRoutes from './routes/fundraisers.js';
 import adminRoutes from './routes/admin.js';
 import dashboardRoutes from './routes/dashboard.js';
+import pricingRoutes from './routes/pricing.js';
+import notificationsRoutes from './routes/notifications.js';
+import specialitiesRoutes from './routes/specialities.js';
+import businessRoutes from './routes/business.js';
 
 dotenv.config();
 
@@ -55,12 +59,16 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/profile', userRoutes);
 app.use('/api/onboarding', userRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/patient/bookings', bookingRoutes);
+app.use('/api/patient', bookingRoutes);
 app.use('/api/partner', bookingRoutes);
 app.use('/api/business/products', productRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/business', businessRoutes);
 app.use('/api/service-manuals', serviceManualRoutes);
 app.use('/api/manuals', serviceManualRoutes);
 app.use('/api/jobs', jobRoutes);
@@ -83,6 +91,9 @@ app.use('/api/lessons', lessonsRoutes);
 app.use('/api/fundraisers', fundraisersRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', pricingRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/specialities', specialitiesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 

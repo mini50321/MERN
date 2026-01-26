@@ -14,6 +14,18 @@ router.get('/google/redirect_url', async (_req: Request, res: Response) => {
   }
 });
 
+router.get('/google/redirect', async (_req: Request, res: Response) => {
+  try {
+    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+    return res.json({ 
+      redirectUrl: `${frontendUrl}/login?method=phone`
+    });
+  } catch (error) {
+    console.error('OAuth redirect URL error:', error);
+    return res.status(500).json({ error: 'Failed to get OAuth redirect URL' });
+  }
+});
+
 router.post('/sessions', async (req: Request, res: Response) => {
   try {
     const { code } = req.body;

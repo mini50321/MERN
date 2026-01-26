@@ -5,6 +5,9 @@ export interface ISupportTicket extends Document {
   subject: string;
   message: string;
   status: string;
+  order_id?: string;
+  booking_id?: string;
+  service_type?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -27,6 +30,9 @@ const SupportTicketSchema = new Schema<ISupportTicket>({
     type: String,
     default: 'open'
   },
+  order_id: String,
+  booking_id: String,
+  service_type: String,
   created_at: {
     type: Date,
     default: Date.now

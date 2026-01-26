@@ -1,21 +1,45 @@
 import express, { Response } from 'express';
+import multer from 'multer';
 import { User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
+
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!req.user || !req.user.user_id) {
+      return res.status(401).json({ error: 'Unauthorized - Invalid user data' });
+    }
+
+    const user = await User.findOne({ user_id: req.user.user_id });
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     return res.json({ profile: user });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get user error:', error);
-    return res.status(500).json({ error: 'Failed to fetch user profile' });
+    console.error('Error details:', error?.message);
+    console.error('Stack trace:', error?.stack);
+    return res.status(500).json({ 
+      error: 'Failed to fetch user profile',
+      details: error?.message || 'Unknown error'
+    });
   }
 });
 
@@ -42,6 +66,140 @@ const updateUserProfile = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+router.get('/completion-status', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const profile = user.toObject();
+    const completedFields: string[] = [];
+    const totalFields = 10;
+
+    if (profile.full_name) completedFields.push('name');
+    if (profile.phone) completedFields.push('phone');
+    if (profile.location || profile.city) completedFields.push('location');
+    if (profile.bio) completedFields.push('bio');
+    if (profile.skills) completedFields.push('skills');
+    if (profile.experience) completedFields.push('experience');
+    if (profile.education) completedFields.push('education');
+    if (profile.profile_picture_url) completedFields.push('profile_picture');
+    if (profile.resume_url) completedFields.push('resume');
+    if ((profile as any).specialities_json || (profile as any).products_json) {
+      completedFields.push('specialities');
+    }
+
+    const completionPercentage = Math.round((completedFields.length / totalFields) * 100);
+
+    return res.json({
+      completed: completedFields.length,
+      total: totalFields,
+      percentage: completionPercentage,
+      fields: completedFields
+    });
+  } catch (error: any) {
+    console.error('Get completion status error:', error);
+    return res.json({
+      completed: 0,
+      total: 10,
+      percentage: 0,
+      fields: []
+    });
+  }
+});
+
+router.put('/onboarding-details', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.user_id;
+    const updateData: any = {};
+
+    if (req.body.business_name) {
+      updateData.business_name = String(req.body.business_name);
+    }
+
+    if (req.body.country) {
+      updateData.country = String(req.body.country);
+    }
+
+    if (req.body.state) {
+      updateData.state = String(req.body.state);
+    }
+
+    if (req.body.city) {
+      updateData.city = String(req.body.city);
+    }
+
+    if (req.body.pincode) {
+      updateData.pincode = String(req.body.pincode);
+    }
+
+    if (req.body.gst_number) {
+      updateData.gst_number = String(req.body.gst_number);
+    }
+
+    if (req.body.gst_document_url) {
+      updateData.gst_document_url = String(req.body.gst_document_url);
+    }
+
+    if (req.body.phone) {
+      updateData.phone = String(req.body.phone);
+    }
+
+    if (req.body.email) {
+      updateData.patient_email = String(req.body.email);
+    }
+
+    if (req.body.speciality_ids && Array.isArray(req.body.speciality_ids)) {
+      updateData.specialities_json = JSON.stringify(req.body.speciality_ids.map((id: number) => ({ speciality_id: id })));
+    }
+
+    if (req.body.products && Array.isArray(req.body.products)) {
+      updateData.products_json = JSON.stringify(req.body.products);
+    }
+
+    if (req.body.bio) {
+      updateData.bio = String(req.body.bio);
+    }
+
+    if (req.body.skills) {
+      updateData.skills = String(req.body.skills);
+    }
+
+    if (req.body.experience_json && Array.isArray(req.body.experience_json)) {
+      updateData.experience = JSON.stringify(req.body.experience_json);
+    }
+
+    if (req.body.education_json && Array.isArray(req.body.education_json)) {
+      updateData.education = JSON.stringify(req.body.education_json);
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      { user_id: userId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({ 
+      success: true, 
+      profile: updatedUser,
+      xp_awarded: 0
+    });
+  } catch (error: any) {
+    console.error('Update onboarding details error:', error);
+    console.error('Error details:', error?.message, error?.stack);
+    return res.status(500).json({ 
+      error: 'Failed to update onboarding details',
+      details: error?.message || 'Unknown error'
+    });
+  }
+});
 
 router.put('/me', authMiddleware, updateUserProfile);
 router.put('/', authMiddleware, updateUserProfile);
@@ -221,6 +379,147 @@ router.post('/location-change-request', authMiddleware, async (req: AuthRequest,
       error: 'Failed to submit location change request',
       details: error?.message || 'Unknown error'
     });
+  }
+});
+
+router.post('/upload-logo', authMiddleware, upload.single('logo'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No logo file provided' });
+    }
+
+    const file = req.file;
+    
+    if (!file.mimetype.startsWith('image/')) {
+      return res.status(400).json({ error: 'File must be an image' });
+    }
+
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    return res.json({
+      success: true,
+      logo_url: base64Image,
+      message: 'Logo uploaded successfully'
+    });
+  } catch (error: any) {
+    console.error('Upload logo error:', error);
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'Logo file is too large. Maximum size is 5MB.' });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Failed to upload logo' });
+  }
+});
+
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and PDF files are allowed'));
+    }
+  }
+});
+
+router.post('/upload-gst', authMiddleware, documentUpload.single('document'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No document file provided' });
+    }
+
+    const file = req.file;
+    
+    if (!file.mimetype.startsWith('image/') && file.mimetype !== 'application/pdf') {
+      return res.status(400).json({ error: 'File must be an image or PDF' });
+    }
+
+    const base64File = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    return res.json({
+      success: true,
+      document_url: base64File,
+      message: 'GST document uploaded successfully'
+    });
+  } catch (error: any) {
+    console.error('Upload GST document error:', error);
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'Document file is too large. Maximum size is 10MB.' });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Failed to upload GST document' });
+  }
+});
+
+router.get('/specialities', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    try {
+      const specialitiesJson = (user as any).specialities_json;
+      if (specialitiesJson && typeof specialitiesJson === 'string') {
+        const specialities = JSON.parse(specialitiesJson);
+        return res.json(Array.isArray(specialities) ? specialities : []);
+      }
+      if (Array.isArray(specialitiesJson)) {
+        return res.json(specialitiesJson);
+      }
+    } catch (parseError) {
+      console.error('Error parsing specialities_json:', parseError);
+    }
+    
+    return res.json([]);
+  } catch (error: any) {
+    console.error('Get user specialities error:', error);
+    return res.json([]);
+  }
+});
+
+router.get('/products', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    try {
+      const productsJson = (user as any).products_json;
+      if (productsJson && typeof productsJson === 'string') {
+        const products = JSON.parse(productsJson);
+        return res.json(Array.isArray(products) ? products : []);
+      }
+      if (Array.isArray(productsJson)) {
+        return res.json(productsJson);
+      }
+    } catch (parseError) {
+      console.error('Error parsing products_json:', parseError);
+    }
+    
+    return res.json([]);
+  } catch (error: any) {
+    console.error('Get user products error:', error);
+    return res.json([]);
+  }
+});
+
+router.get('/products/:id/brands', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json([]);
+  } catch (error: any) {
+    console.error('Get product brands error:', error);
+    return res.json([]);
   }
 });
 

@@ -40,6 +40,7 @@ export interface IServiceOrder extends Document {
   partner_review?: string;
   responded_at?: Date;
   completed_at?: Date;
+  order_number?: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -113,6 +114,10 @@ const ServiceOrderSchema = new Schema<IServiceOrder>({
   partner_review: String,
   responded_at: Date,
   completed_at: Date,
+  order_number: {
+    type: Number,
+    index: true
+  },
   created_at: {
     type: Date,
     default: Date.now,
@@ -126,6 +131,13 @@ const ServiceOrderSchema = new Schema<IServiceOrder>({
 
 ServiceOrderSchema.pre('save', function(next) {
   this.updated_at = new Date();
+  
+  if (!this.order_number) {
+    const objIdStr = this._id.toString();
+    const lastDigits = objIdStr.slice(-8);
+    this.order_number = parseInt(lastDigits, 16) % 1000000;
+  }
+  
   next();
 });
 

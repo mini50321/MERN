@@ -65,6 +65,7 @@ const appRoutes = [
 
   { path: "/profile", element: <ProfilePage /> },
   { path: "/profile/edit", element: <EditProfilePage /> },
+  { path: "/edit-profile", element: <EditProfilePage /> },
   { path: "/settings", element: <SettingsPage /> },
 
   { path: "/learning", element: <LearningCenterPage /> },

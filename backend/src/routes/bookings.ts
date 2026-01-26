@@ -1,5 +1,5 @@
 import express, { Response } from 'express';
-import { ServiceOrder, User } from '../models/index.js';
+import { ServiceOrder, User, Transaction } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -77,10 +77,18 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const orders = await ServiceOrder.find({ patient_user_id: req.user!.user_id })
       .sort({ created_at: -1 });
     
-    const formattedOrders = orders.map(order => ({
-      ...order.toObject(),
-      id: order._id.toString()
-    }));
+    const formattedOrders = orders.map(order => {
+      const orderObj = order.toObject();
+      if (!orderObj.order_number) {
+        const objIdStr = order._id.toString();
+        const lastDigits = objIdStr.slice(-8);
+        orderObj.order_number = parseInt(lastDigits, 16) % 1000000;
+      }
+      return {
+        ...orderObj,
+        id: order._id.toString()
+      };
+    });
     
     return res.json(formattedOrders);
   } catch (error) {
@@ -132,6 +140,12 @@ router.get('/patient', authMiddleware, async (req: AuthRequest, res: Response) =
         }
       }
       
+      if (!orderObj.order_number) {
+        const objIdStr = order._id.toString();
+        const lastDigits = objIdStr.slice(-8);
+        orderObj.order_number = parseInt(lastDigits, 16) % 1000000;
+      }
+      
       return {
         ...orderObj,
         id: order._id.toString(),
@@ -146,7 +160,7 @@ router.get('/patient', authMiddleware, async (req: AuthRequest, res: Response) =
   }
 });
 
-router.get('/partner/ratings', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.get('/ratings', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.user_id;
     
@@ -233,6 +247,314 @@ router.get('/partner/ratings', authMiddleware, async (req: AuthRequest, res: Res
       error: 'Failed to fetch ratings',
       details: error?.message || 'Unknown error'
     });
+  }
+});
+
+router.get('/transactions', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.user_id;
+    
+    const transactions = await Transaction.find({ 
+      user_id: userId,
+      transaction_type: { $in: ['payment', 'debit', 'service_payment'] }
+    })
+      .sort({ created_at: -1 })
+      .limit(100);
+    
+    const formattedTransactions = transactions.map(transaction => {
+      const transObj = transaction.toObject();
+      return {
+        id: transObj._id?.toString() || '',
+        amount: transObj.amount,
+        currency: transObj.currency || 'INR',
+        description: transObj.description || 'Service Payment',
+        status: transObj.status || 'completed',
+        payment_method: transObj.payment_method || 'online',
+        created_at: transObj.created_at,
+        transaction_type: transObj.transaction_type
+      };
+    });
+    
+    return res.json(formattedTransactions);
+  } catch (error: any) {
+    console.error('Get patient transactions error:', error);
+    console.error('Error details:', error?.message);
+    return res.status(500).json({ 
+      error: 'Failed to fetch transactions',
+      details: error?.message || 'Unknown error'
+    });
+  }
+});
+
+router.get('/notification-settings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      push_notifications: user.push_notifications ?? true,
+      email_alerts: user.email_notifications ?? true,
+      sms_alerts: user.sms_notifications ?? false
+    });
+  } catch (error) {
+    console.error('Get notification settings error:', error);
+    return res.status(500).json({ error: 'Failed to fetch notification settings' });
+  }
+});
+
+router.put('/notification-settings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const updateData: any = {};
+    
+    if (req.body.push_notifications !== undefined) {
+      updateData.push_notifications = Boolean(req.body.push_notifications);
+    }
+    
+    if (req.body.email_alerts !== undefined) {
+      updateData.email_notifications = Boolean(req.body.email_alerts);
+    }
+    
+    if (req.body.sms_alerts !== undefined) {
+      updateData.sms_notifications = Boolean(req.body.sms_alerts);
+    }
+
+    const user = await User.findOneAndUpdate(
+      { user_id: req.user!.user_id },
+      { $set: updateData },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      push_notifications: user.push_notifications ?? true,
+      email_alerts: user.email_notifications ?? true,
+      sms_alerts: user.sms_notifications ?? false
+    });
+  } catch (error) {
+    console.error('Update notification settings error:', error);
+    return res.status(500).json({ error: 'Failed to update notification settings' });
+  }
+});
+
+router.get('/:id/search-status', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const orderId = req.params.id;
+    const userId = req.user!.user_id;
+    
+    console.log('Search status request - orderId:', orderId, 'userId:', userId);
+    
+    let order;
+    const mongoose = await import('mongoose');
+    
+    if (mongoose.default.Types.ObjectId.isValid(orderId)) {
+      order = await ServiceOrder.findOne({ 
+        _id: new mongoose.default.Types.ObjectId(orderId),
+        patient_user_id: userId 
+      });
+    } else {
+      console.log('Invalid ObjectId format, trying numeric ID matching');
+      const numericId = parseInt(orderId);
+      
+      if (!isNaN(numericId)) {
+        order = await ServiceOrder.findOne({ 
+          order_number: numericId,
+          patient_user_id: userId 
+        });
+      }
+      
+      if (!order) {
+        console.log('Not found by order_number, searching all orders');
+        const allOrders = await ServiceOrder.find({ patient_user_id: userId }).sort({ created_at: -1 });
+        
+        if (!isNaN(numericId)) {
+          order = allOrders.find((o: any) => {
+            const objIdStr = o._id.toString();
+            return objIdStr.includes(orderId) || (o.order_number && o.order_number === numericId);
+          });
+        }
+        
+        if (!order) {
+          order = allOrders.find((o: any) => {
+            const objIdStr = o._id.toString();
+            return objIdStr.includes(orderId) || objIdStr.endsWith(orderId);
+          });
+        }
+      }
+    }
+    
+    if (!order) {
+      console.log('Order not found for orderId:', orderId);
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    console.log('Order found:', order._id.toString(), 'status:', order.status);
+
+    const orderObj = order.toObject();
+    
+    let partner = null;
+    if (order.assigned_engineer_id) {
+      try {
+        partner = await User.findOne({ user_id: order.assigned_engineer_id });
+        console.log('Partner found:', partner ? partner.user_id : 'null');
+      } catch (partnerError: any) {
+        console.error('Error fetching partner:', partnerError?.message);
+      }
+    }
+
+    let status = 'not_found';
+    if (order.status === 'accepted' || order.status === 'in_progress' || order.status === 'confirmed') {
+      status = 'found';
+    } else if (order.status === 'pending' || order.status === 'searching') {
+      status = 'searching';
+    }
+
+    const response = {
+      status,
+      booking: {
+        ...orderObj,
+        id: orderObj._id?.toString() || orderId
+      },
+      partner: partner ? {
+        id: partner.user_id,
+        name: partner.full_name || partner.business_name || 'Unknown',
+        phone: partner.phone || null,
+        picture: partner.profile_picture_url || null,
+        rating: 0
+      } : null
+    };
+
+    console.log('Returning response with status:', status);
+    return res.json(response);
+  } catch (error: any) {
+    console.error('Get search status error:', error);
+    console.error('Error details:', error?.message);
+    console.error('Stack trace:', error?.stack);
+    console.error('OrderId received:', req.params.id);
+    return res.status(500).json({ 
+      error: 'Failed to fetch search status',
+      details: error?.message || 'Unknown error'
+    });
+  }
+});
+
+router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await ServiceOrder.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        patient_user_id: req.user!.user_id 
+      },
+      { 
+        $set: { 
+          status: 'accepted',
+          accepted_at: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    return res.json({ success: true, order });
+  } catch (error) {
+    console.error('Accept booking error:', error);
+    return res.status(500).json({ error: 'Failed to accept booking' });
+  }
+});
+
+router.post('/:id/decline', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await ServiceOrder.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        patient_user_id: req.user!.user_id 
+      },
+      { 
+        $set: { 
+          status: 'declined',
+          declined_at: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    return res.json({ success: true, order });
+  } catch (error) {
+    console.error('Decline booking error:', error);
+    return res.status(500).json({ error: 'Failed to decline booking' });
+  }
+});
+
+router.post('/:id/cancel', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await ServiceOrder.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        patient_user_id: req.user!.user_id 
+      },
+      { 
+        $set: { 
+          status: 'cancelled',
+          cancelled_at: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    return res.json({ success: true, order });
+  } catch (error) {
+    console.error('Cancel booking error:', error);
+    return res.status(500).json({ error: 'Failed to cancel booking' });
+  }
+});
+
+router.post('/:id/rate', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { rating, review } = req.body;
+    
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    const order = await ServiceOrder.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        patient_user_id: req.user!.user_id 
+      },
+      { 
+        $set: { 
+          user_rating: Number(rating),
+          user_review: review || null
+        }
+      },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    return res.json({ success: true, order });
+  } catch (error) {
+    console.error('Rate booking error:', error);
+    return res.status(500).json({ error: 'Failed to rate booking' });
   }
 });
 

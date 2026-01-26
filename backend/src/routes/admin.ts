@@ -355,5 +355,50 @@ router.put('/content/:id/reject', authMiddleware, async (_req: AuthRequest, res:
   }
 });
 
+router.get('/dynamic-pricing/night-duty', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    return res.json({
+      enabled: true,
+      percentage: 20,
+      start_time: '22:00',
+      end_time: '06:00'
+    });
+  } catch (error) {
+    console.error('Get night duty pricing error:', error);
+    return res.status(500).json({ error: 'Failed to fetch night duty pricing' });
+  }
+});
+
+router.put('/dynamic-pricing/night-duty', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Update night duty pricing error:', error);
+    return res.status(500).json({ error: 'Failed to update night duty pricing' });
+  }
+});
+
+router.get('/dynamic-pricing/emergency', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    return res.json({
+      enabled: true,
+      percentage: 50,
+      applies_to: ['ambulance', 'nursing']
+    });
+  } catch (error) {
+    console.error('Get emergency pricing error:', error);
+    return res.status(500).json({ error: 'Failed to fetch emergency pricing' });
+  }
+});
+
+router.put('/dynamic-pricing/emergency', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Update emergency pricing error:', error);
+    return res.status(500).json({ error: 'Failed to update emergency pricing' });
+  }
+});
+
 export default router;
 

@@ -214,23 +214,46 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const news = await NewsUpdate.findOneAndUpdate(
-      { 
-        _id: req.params.id,
-        posted_by_user_id: req.user!.user_id 
-      },
-      { $set: req.body },
-      { new: true }
-    );
+    const newsId = req.params.id;
+    const userId = req.user!.user_id;
+    let news;
+
+    if (newsId.match(/^[0-9a-fA-F]{24}$/)) {
+      news = await NewsUpdate.findOneAndUpdate(
+        { 
+          _id: newsId,
+          posted_by_user_id: userId 
+        },
+        { $set: req.body },
+        { new: true }
+      );
+    } else {
+      const allNews = await NewsUpdate.find({ posted_by_user_id: userId }).lean();
+      const found = allNews.find(n => {
+        const idNum = parseInt(n._id.toString().slice(-8), 16);
+        return idNum === parseInt(newsId, 10);
+      });
+      if (found) {
+        news = await NewsUpdate.findOneAndUpdate(
+          { 
+            _id: found._id,
+            posted_by_user_id: userId 
+          },
+          { $set: req.body },
+          { new: true }
+        );
+      }
+    }
 
     if (!news) {
-      return res.status(404).json({ error: 'News not found' });
+      return res.status(404).json({ error: 'News post not found or user not authorized' });
     }
 
     return res.json({ news, success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update news error:', error);
-    return res.status(500).json({ error: 'Failed to update news' });
+    console.error('Error details:', error.message, error.stack);
+    return res.status(500).json({ error: 'Failed to update news', details: error.message });
   }
 });
 

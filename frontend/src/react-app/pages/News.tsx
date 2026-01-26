@@ -289,7 +289,7 @@ export default function News() {
         ) : (
           <div className="space-y-6">
             {news.map((item) => {
-              const isOwner = currentUserId && item.posted_by_user_id && String(currentUserId) === String(item.posted_by_user_id);
+              const isOwner = !!(currentUserId && item.posted_by_user_id && String(currentUserId) === String(item.posted_by_user_id));
               if (item.posted_by_user_id) {
                 console.log("News item:", {
                   id: item.id,

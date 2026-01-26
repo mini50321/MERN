@@ -44,7 +44,7 @@ export default function LearningCenter() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-  const [enrolledCourses, setEnrolledCourses] = useState<Set<number>>(new Set());
+  const [enrolledCourses, setEnrolledCourses] = useState<Set<number | string>>(new Set());
   const [userCountry, setUserCountry] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);

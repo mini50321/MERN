@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { X, Upload } from "lucide-react";
 
 interface ServiceManual {
-  id: number;
+  id: number | string;
   title: string;
   manufacturer: string | null;
   model_number: string | null;

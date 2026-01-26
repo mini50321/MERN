@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@getmocha/users-service/react";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
-import { Search, Download, FileText, Upload, MessageSquare, Trash2, X, Plus, MoreHorizontal, Code, Flag } from "lucide-react";
+import { Search, Download, FileText, Upload, MessageSquare, X, Plus, MoreHorizontal, Code, Flag } from "lucide-react";
 import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
 import EditServiceManualModal from "@/react-app/components/EditServiceManualModal";
 
@@ -224,7 +224,7 @@ export default function Manuals() {
     }
   };
 
-  const handleDeleteManual = async (manualId: number) => {
+  const handleDeleteManual = async (manualId: number | string) => {
     setIsDeleting(true);
     try {
       const response = await fetch(`/api/manuals/${manualId}`, {

@@ -52,3 +52,12 @@
     @apply text-sm font-semibold;
   }
 }
+
+input:focus, textarea:focus, select:focus {
+  scroll-margin: 0 !important;
+  scroll-padding: 0 !important;
+}
+
+html {
+  scroll-behavior: auto !important;
+}

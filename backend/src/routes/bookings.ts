@@ -146,6 +146,57 @@ router.get('/patient', authMiddleware, async (req: AuthRequest, res: Response) =
   }
 });
 
+router.get('/partner/ratings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.user_id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+    
+    const ratings = await ServiceOrder.find({
+      assigned_engineer_id: userId,
+      status: 'completed',
+      partner_rating: { $exists: true, $ne: null }
+    })
+    .sort({ created_at: -1 })
+    .lean();
+    
+    const formattedRatings = ratings.map((order: any) => {
+      try {
+        return {
+          id: parseInt(order._id.toString().slice(-8), 16) || Date.now(),
+          patient_name: order.patient_name || 'Anonymous',
+          service_type: order.service_type || 'Service',
+          equipment_name: order.equipment_name || null,
+          partner_rating: order.partner_rating || 0,
+          partner_review: order.partner_review || '',
+          created_at: order.created_at ? (order.created_at instanceof Date ? order.created_at.toISOString() : new Date(order.created_at).toISOString()) : new Date().toISOString()
+        };
+      } catch (mapError) {
+        console.error('Error formatting rating:', mapError);
+        return null;
+      }
+    }).filter((rating: any) => rating !== null);
+    
+    const avgRating = formattedRatings.length > 0
+      ? formattedRatings.reduce((sum: number, r: any) => sum + (r.partner_rating || 0), 0) / formattedRatings.length
+      : 0;
+    
+    return res.json({
+      ratings: formattedRatings,
+      average_rating: Math.round(avgRating * 10) / 10
+    });
+  } catch (error: any) {
+    console.error('Get partner ratings error:', error);
+    console.error('Error details:', error?.message, error?.stack);
+    return res.status(500).json({ 
+      error: 'Failed to fetch ratings',
+      details: error?.message || 'Unknown error'
+    });
+  }
+});
+
 router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const order = await ServiceOrder.findOne({ 

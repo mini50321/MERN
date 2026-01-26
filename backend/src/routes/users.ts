@@ -19,7 +19,7 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
+const updateUserProfile = async (req: AuthRequest, res: Response) => {
   try {
     const updateData = req.body;
     const user = await User.findOneAndUpdate(
@@ -33,10 +33,17 @@ router.put('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     return res.json({ profile: user, success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update user error:', error);
-    return res.status(500).json({ error: 'Failed to update user profile' });
+    console.error('Error details:', error?.message, error?.stack);
+    return res.status(500).json({ 
+      error: 'Failed to update user profile',
+      details: error?.message || 'Unknown error'
+    });
   }
-});
+};
+
+router.put('/me', authMiddleware, updateUserProfile);
+router.put('/', authMiddleware, updateUserProfile);
 
 export default router;

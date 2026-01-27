@@ -177,6 +177,7 @@ router.post('/otp/verify-phone', async (req: Request, res: Response) => {
 
 router.get('/logout', (_req: Request, res: Response) => {
   res.clearCookie('mavy_session');
+  res.clearCookie('mocha_session_token');
   return res.json({ success: true });
 });
 

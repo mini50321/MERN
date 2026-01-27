@@ -30,6 +30,7 @@ export interface IUser extends Document {
   account_type?: string;
   profession?: string;
   business_name?: string;
+  email?: string;
   patient_email?: string;
   patient_latitude?: number;
   patient_longitude?: number;
@@ -92,6 +93,7 @@ const UserSchema = new Schema<IUser>({
   account_type: String,
   profession: String,
   business_name: String,
+  email: String,
   patient_email: String,
   patient_latitude: Number,
   patient_longitude: Number,

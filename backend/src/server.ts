@@ -60,6 +60,11 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.get('/api/logout', (_req, res) => {
+  res.clearCookie('mavy_session');
+  res.clearCookie('mocha_session_token');
+  return res.json({ success: true });
+});
 app.use('/api/users', userRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/profile', userRoutes);

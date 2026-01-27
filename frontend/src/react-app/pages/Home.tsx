@@ -932,7 +932,7 @@ export default function Home() {
                   if (user) {
                     navigate("/onboarding");
                   } else {
-                    navigate("/login?method=phone");
+                    navigate("/login?method=gmail");
                   }
                 }}
                 className="group px-8 py-4 bg-white text-blue-600 rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3"
@@ -1604,7 +1604,7 @@ export default function Home() {
                 if (user) {
                   navigate("/onboarding");
                 } else {
-                  navigate("/login?method=phone");
+                  navigate("/login?method=gmail");
                 }
               }}
               className="px-10 py-5 bg-white text-blue-600 rounded-2xl font-bold text-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 inline-flex items-center gap-3"

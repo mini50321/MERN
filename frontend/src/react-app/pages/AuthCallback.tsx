@@ -1,13 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "@getmocha/users-service/react";
 import { Loader2, MapPin } from "lucide-react";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const { exchangeCodeForSessionToken } = useAuth();
   const [status, setStatus] = useState("Completing sign in...");
   const hasExchanged = useRef(false);
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -16,12 +15,56 @@ export default function AuthCallback() {
         return;
       }
       hasExchanged.current = true;
+      
+      // Check if there's a code in the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      
+      if (error) {
+        console.error('OAuth error:', error);
+        navigate("/login?method=phone");
+        return;
+      }
+      
+      if (!code) {
+        if (hasRedirected.current) {
+          console.warn('Redirect loop detected, redirecting to home');
+          navigate("/");
+          return;
+        }
+        hasRedirected.current = true;
+        console.warn('No OAuth code found in URL, redirecting to login');
+        navigate("/login?method=phone");
+        return;
+      }
+      
       try {
-        await exchangeCodeForSessionToken();
+        setStatus("Verifying with Google...");
+        const response = await fetch("/api/oauth/google/callback", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ code }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to verify with Google");
+        }
+
+        const data = await response.json();
         
-        // Check if user is an admin
+        if (!data.success) {
+          throw new Error("Authentication failed");
+        }
+        
         setStatus("Checking access level...");
-        const adminCheckRes = await fetch("/api/check-admin");
+        const adminCheckRes = await fetch("/api/check-admin", {
+          credentials: "include"
+        });
         const adminCheck = await adminCheckRes.json();
         
         if (adminCheck.is_admin) {
@@ -29,9 +72,10 @@ export default function AuthCallback() {
           return;
         }
 
-        // Check if user has completed onboarding
         setStatus("Loading your profile...");
-        const profileRes = await fetch("/api/users/me");
+        const profileRes = await fetch("/api/users/me", {
+          credentials: "include"
+        });
         const profileData = await profileRes.json();
         
         // Check if location needs to be set (for new users)

@@ -12,6 +12,22 @@ router.post('/submit', authMiddleware, async (req: AuthRequest, res: Response) =
       return res.status(400).json({ error: "Patient name, contact, and issue description are required" });
     }
 
+    const userId = req.user!.user_id;
+    const user = await User.findOne({ user_id: userId });
+    
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userEmail = (user as any).email || (user as any).patient_email || body.patient_email;
+    
+    if (!userEmail) {
+      return res.status(400).json({ 
+        error: "Email is required to book services. Please update your profile with an email address or provide an email in the booking form.",
+        requires_email: true
+      });
+    }
+
     const locationParts = [
       body.address,
       body.city,
@@ -24,7 +40,7 @@ router.post('/submit', authMiddleware, async (req: AuthRequest, res: Response) =
       patient_user_id: req.user!.user_id,
       patient_name: body.patient_name,
       patient_contact: body.patient_contact,
-      patient_email: body.patient_email || null,
+      patient_email: userEmail,
       patient_location: fullLocation || null,
       service_type: body.service_type || "Service",
       service_category: body.service_category || null,

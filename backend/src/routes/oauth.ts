@@ -2,6 +2,25 @@ import express, { type Request, type Response } from 'express';
 import { User } from '../models/index.js';
 import jwt from 'jsonwebtoken';
 
+type GoogleTokenResponse = {
+  access_token: string;
+  [key: string]: unknown;
+};
+
+type GoogleErrorResponse = {
+  error?: string;
+  error_description?: string;
+  [key: string]: unknown;
+};
+
+type GoogleUserInfo = {
+  email?: string;
+  id?: string;
+  name?: string;
+  picture?: string;
+  [key: string]: unknown;
+};
+
 const router = express.Router();
 
 router.get('/google/redirect_url', async (_req: Request, res: Response) => {
@@ -102,7 +121,7 @@ router.post('/google/callback', async (req: Request, res: Response) => {
       clearTimeout(timeoutId);
 
       if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.json();
+        const errorData = (await tokenResponse.json()) as GoogleErrorResponse;
         console.error('Google token exchange error:', errorData);
         console.error('Request details:', {
           redirectUri,
@@ -116,7 +135,7 @@ router.post('/google/callback', async (req: Request, res: Response) => {
         });
       }
 
-      const tokens = await tokenResponse.json();
+      const tokens = (await tokenResponse.json()) as GoogleTokenResponse;
       const accessToken = tokens.access_token;
 
       const userInfoController = new AbortController();
@@ -136,7 +155,7 @@ router.post('/google/callback', async (req: Request, res: Response) => {
           return res.status(400).json({ error: 'Failed to fetch user information' });
         }
 
-        const googleUser = await userInfoResponse.json();
+        const googleUser = (await userInfoResponse.json()) as GoogleUserInfo;
     
         if (!googleUser.email) {
           return res.status(400).json({ error: 'Email is required but not provided by Google' });

@@ -1770,7 +1770,8 @@ function SettingsTab({ onLogout }: { onLogout: () => void }) {
     setIsDeleting(true);
     try {
       const response = await fetch("/api/account", {
-        method: "DELETE"
+        method: "DELETE",
+        credentials: "include"
       });
 
       if (response.ok) {

@@ -622,4 +622,35 @@ router.get('/products/:id/brands', authMiddleware, async (_req: AuthRequest, res
   }
 });
 
+router.delete('/account', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.user_id;
+    
+    const user = await User.findOne({ user_id: userId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    await User.deleteOne({ user_id: userId });
+
+    res.clearCookie('mavy_session', {
+      httpOnly: true,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    });
+
+    return res.json({ 
+      success: true, 
+      message: 'Account deleted successfully' 
+    });
+  } catch (error: any) {
+    console.error('Delete account error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to delete account',
+      details: error?.message || 'Unknown error'
+    });
+  }
+});
+
 export default router;

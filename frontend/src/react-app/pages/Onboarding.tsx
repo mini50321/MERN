@@ -15,7 +15,7 @@ import OnboardingAccountType from "@/react-app/components/onboarding/OnboardingA
 import OnboardingPartnerTypeSelect from "@/react-app/components/onboarding/OnboardingPartnerTypeSelect";
 
 export default function Onboarding() {
-  const { user, isPending } = useAuth();
+  const { user, isPending, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0); // Start at step 0 (account type selection)
   const [accountType, setAccountType] = useState<string | null>(null);
@@ -24,9 +24,24 @@ export default function Onboarding() {
   });
 
   useEffect(() => {
-    // Wait for auth to finish loading before checking user
     if (!isPending && !user) {
       navigate("/");
+      return;
+    }
+    
+    if (user && user.onboarding_completed) {
+      const accountType = user.account_type;
+      if (accountType === "business") {
+        navigate("/business-dashboard");
+      } else if (accountType === "individual") {
+        navigate("/dashboard");
+      } else if (accountType === "freelancer") {
+        navigate("/freelancer-dashboard");
+      } else if (accountType === "patient") {
+        navigate("/patient-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     }
   }, [user, isPending, navigate]);
 
@@ -112,18 +127,29 @@ export default function Onboarding() {
       });
 
       if (response.ok) {
-        // Force a full page reload to refresh user data
-        if (accountType === "business") {
-          window.location.href = "/business-dashboard";
-        } else if (accountType === "individual") {
-          window.location.href = "/dashboard";
-        } else if (accountType === "freelancer") {
-          window.location.href = "/freelancer-dashboard";
-        } else if (accountType === "patient") {
-          window.location.href = "/patient-dashboard";
+        const result = await response.json();
+        console.log("Onboarding completed:", result);
+        
+        await refreshUser();
+        
+        const targetAccountType = accountType || completeData.account_type;
+        let redirectPath = "/dashboard";
+        
+        if (targetAccountType === "business") {
+          redirectPath = "/business-dashboard";
+        } else if (targetAccountType === "individual") {
+          redirectPath = "/dashboard";
+        } else if (targetAccountType === "freelancer") {
+          redirectPath = "/freelancer-dashboard";
+        } else if (targetAccountType === "patient") {
+          redirectPath = "/patient-dashboard";
         }
+        
+        window.location.href = redirectPath;
       } else {
-        alert("Failed to complete onboarding. Please try again.");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Onboarding completion failed:", errorData);
+        alert(`Failed to complete onboarding: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Onboarding error:", error);

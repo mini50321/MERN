@@ -69,6 +69,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/profile', userRoutes);
 app.use('/api/onboarding', userRoutes);
+app.use('/api/account', userRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/patient/bookings', bookingRoutes);
 app.use('/api/patient', bookingRoutes);

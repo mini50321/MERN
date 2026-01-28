@@ -622,7 +622,7 @@ router.get('/products/:id/brands', authMiddleware, async (_req: AuthRequest, res
   }
 });
 
-router.delete('/account', authMiddleware, async (req: AuthRequest, res: Response) => {
+router.delete('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.user_id;
     

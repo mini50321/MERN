@@ -203,6 +203,7 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
+  const [submitErrorMessage, setSubmitErrorMessage] = useState<string>("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [showProfileFields, setShowProfileFields] = useState(false);
   const [distance, setDistance] = useState<number | null>(null);
@@ -383,13 +384,33 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
   };
 
   const handleFinalSubmit = async () => {
+    if (!formData.patient_name || !formData.patient_name.trim()) {
+      setSubmitStatus("error");
+      setSubmitErrorMessage("Please enter your name");
+      return;
+    }
+
+    if (!formData.patient_contact || !formData.patient_contact.trim()) {
+      setSubmitStatus("error");
+      setSubmitErrorMessage("Please enter your contact number");
+      return;
+    }
+
+    if (!formData.issue_description || !formData.issue_description.trim()) {
+      setSubmitStatus("error");
+      setSubmitErrorMessage("Please describe your service requirement");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitStatus("idle");
+    setSubmitErrorMessage("");
 
     try {
       const response = await fetch("/api/bookings/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           service_type: serviceType.name,
           service_category: service.title,
@@ -401,22 +422,22 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
         const data = await response.json();
         setSubmitStatus("success");
         
-        // Play confirmation sound
         playBookingConfirmSound();
         
-        // Store order ID and redirect to search page
         setTimeout(() => {
           onClose();
-          // Trigger navigation to searching screen by reloading bookings
           window.location.hash = `#searching-${data.order_id}`;
           window.location.reload();
         }, 1500);
       } else {
+        const errorData = await response.json().catch(() => ({ error: "Failed to submit booking request" }));
         setSubmitStatus("error");
+        setSubmitErrorMessage(errorData.error || "Failed to submit booking request. Please try again.");
       }
     } catch (error) {
       console.error("Booking submission error:", error);
       setSubmitStatus("error");
+      setSubmitErrorMessage("Network error. Please check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -448,7 +469,7 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
 
           {submitStatus === "error" && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
-              Something went wrong. Please try again.
+              {submitErrorMessage || "Something went wrong. Please try again."}
             </div>
           )}
 

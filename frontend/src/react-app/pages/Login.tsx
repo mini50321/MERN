@@ -18,22 +18,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      if (user.onboarding_completed) {
-        const accountType = user.account_type;
-        if (accountType === "business") {
-          navigate("/business-dashboard");
-        } else if (accountType === "individual") {
-          navigate("/dashboard");
-        } else if (accountType === "freelancer") {
-          navigate("/freelancer-dashboard");
-        } else if (accountType === "patient") {
-          navigate("/patient-dashboard");
-        } else {
-          navigate("/dashboard");
-        }
-      } else {
-        navigate("/onboarding");
-      }
+      navigate("/onboarding");
     }
   }, [user, navigate]);
 
@@ -116,7 +101,7 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        window.location.href = "/";
+        window.location.href = "/onboarding";
       } else {
         setError(data.error || "Invalid OTP. Please try again.");
       }

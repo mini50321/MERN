@@ -150,7 +150,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
 
-    const profile = (user as any).profile;
+    const profile = user as any;
 
     if (!profile?.onboarding_completed) {
       navigate("/onboarding");

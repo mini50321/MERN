@@ -112,30 +112,8 @@ export default function AuthCallback() {
           }
         }
         
-        if (profileData.profile?.onboarding_completed) {
-          // Redirect to appropriate dashboard based on account type
-          const accountType = profileData.profile.account_type;
-          if (accountType === "business") {
-            navigate("/business-dashboard");
-            return;
-          } else if (accountType === "individual") {
-            navigate("/dashboard");
-            return;
-          } else if (accountType === "freelancer") {
-            navigate("/freelancer-dashboard");
-            return;
-          } else if (accountType === "patient") {
-            navigate("/patient-dashboard");
-            return;
-          }
-          // If no specific account type, go to general dashboard
-          navigate("/dashboard");
-          return;
-        } else {
-          // User hasn't completed onboarding - redirect to onboarding
-          navigate("/onboarding");
-          return;
-        }
+        navigate("/onboarding");
+        return;
       } catch (error) {
         console.error("Auth callback error:", error);
         navigate("/");

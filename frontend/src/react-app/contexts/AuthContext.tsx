@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPending, setIsPending] = useState(false);
+  const [isPending, setIsPending] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       setIsLoading(true);
+      setIsPending(true);
       const response = await fetch('/api/users/me', {
         credentials: 'include',
       });

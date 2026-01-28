@@ -25,23 +25,8 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (!isPending && !user) {
-      navigate("/");
+      navigate("/login");
       return;
-    }
-    
-    if (user && user.onboarding_completed) {
-      const accountType = user.account_type;
-      if (accountType === "business") {
-        navigate("/business-dashboard");
-      } else if (accountType === "individual") {
-        navigate("/dashboard");
-      } else if (accountType === "freelancer") {
-        navigate("/freelancer-dashboard");
-      } else if (accountType === "patient") {
-        navigate("/patient-dashboard");
-      } else {
-        navigate("/dashboard");
-      }
     }
   }, [user, isPending, navigate]);
 
@@ -104,8 +89,8 @@ export default function Onboarding() {
       });
 
       if (response.ok) {
-        // Redirect to dashboard
-        window.location.href = "/dashboard";
+        await refreshUser();
+        navigate("/dashboard");
       } else {
         alert("Failed to complete onboarding. Please try again.");
       }
@@ -145,7 +130,7 @@ export default function Onboarding() {
           redirectPath = "/patient-dashboard";
         }
         
-        window.location.href = redirectPath;
+        navigate(redirectPath);
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error("Onboarding completion failed:", errorData);

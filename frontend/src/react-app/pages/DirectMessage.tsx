@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import { Send, ArrowLeft, Loader2 } from "lucide-react";
 

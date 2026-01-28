@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, MapPin, Calendar, FileText, Mail, Stethoscope, CheckCircle, ChevronRight, Ambulance, Navigation, IndianRupee, AlertCircle } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import LocationMapPicker from "@/react-app/components/LocationMapPicker";
 import AmbulanceLocationPicker from "@/react-app/components/AmbulanceLocationPicker";
 import { useNursingPrices } from "@/react-app/hooks/useNursingPrices";

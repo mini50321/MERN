@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import { ArrowLeft, Building2, FileText, Upload, Briefcase, CheckCircle, DollarSign, Save, Sparkles, X, Plus, Mail } from "lucide-react";
 

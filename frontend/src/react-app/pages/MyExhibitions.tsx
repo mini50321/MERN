@@ -4,7 +4,7 @@ import ExhibitionCard from "@/react-app/components/ExhibitionCard";
 import ExhibitionCommentModal from "@/react-app/components/ExhibitionCommentModal";
 import EditExhibitionModal from "@/react-app/components/EditExhibitionModal";
 import { Calendar, Check } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import type { ExhibitionWithCounts } from "@/shared/exhibition-types";
 
 export default function MyExhibitions() {

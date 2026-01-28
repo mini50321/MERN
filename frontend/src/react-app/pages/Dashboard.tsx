@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import BannerCarousel from "@/react-app/components/BannerCarousel";
 import DailyActionFeed from "@/react-app/components/DailyActionFeed";

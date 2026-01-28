@@ -1,4 +1,4 @@
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import { useNavigate } from "react-router";
 import { 
   Briefcase, 
@@ -51,7 +51,6 @@ import { shuffleArray } from "@/shared/utils";
 
 type LegalModal = "privacy" | "terms" | "refund" | null;
 
-// Healthcare Particle Trail Component
 interface Particle {
   x: number;
   y: number;
@@ -94,7 +93,7 @@ function HealthcareParticleTrail() {
       x,
       y,
       vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed - 1, // slight upward bias
+      vy: Math.sin(angle) * speed - 1, 
       size: 6 + Math.random() * 10,
       rotation: Math.random() * Math.PI * 2,
       rotationSpeed: (Math.random() - 0.5) * 0.15,
@@ -113,7 +112,6 @@ function HealthcareParticleTrail() {
     ctx.rotate(p.rotation);
     ctx.globalAlpha = p.life * 0.8;
 
-    // Glow effect
     ctx.shadowColor = p.color;
     ctx.shadowBlur = 15 * p.life;
 
@@ -125,7 +123,6 @@ function HealthcareParticleTrail() {
 
     switch (p.type) {
       case 'plus':
-        // Medical plus/cross
         ctx.beginPath();
         ctx.rect(-s / 4, -s / 2, s / 2, s);
         ctx.rect(-s / 2, -s / 4, s, s / 2);
@@ -143,11 +140,9 @@ function HealthcareParticleTrail() {
         break;
 
       case 'circle':
-        // Glowing circle (like a cell/molecule)
         ctx.beginPath();
         ctx.arc(0, 0, s / 2, 0, Math.PI * 2);
         ctx.fill();
-        // Inner ring
         ctx.globalAlpha = p.life * 0.4;
         ctx.beginPath();
         ctx.arc(0, 0, s / 3, 0, Math.PI * 2);
@@ -155,7 +150,6 @@ function HealthcareParticleTrail() {
         break;
 
       case 'pulse':
-        // ECG-style pulse line
         ctx.beginPath();
         ctx.lineWidth = 2.5;
         ctx.lineCap = 'round';
@@ -173,7 +167,6 @@ function HealthcareParticleTrail() {
         break;
 
       case 'dna':
-        // DNA helix segment
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         const dnaLen = s;

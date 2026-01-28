@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import { ArrowLeft, Download, Heart, MessageCircle, Calendar } from "lucide-react";
 import type { NewsWithCounts } from "@/shared/types";
 

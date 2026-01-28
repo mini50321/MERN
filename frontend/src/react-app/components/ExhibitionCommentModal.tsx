@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Send, MessageCircle, Heart, Reply, ChevronDown, ChevronUp } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import type { ExhibitionCommentWithCounts, ExhibitionCommentReply } from "@/shared/exhibition-types";
 
 interface ExhibitionCommentModalProps {

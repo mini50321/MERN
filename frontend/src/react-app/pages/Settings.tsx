@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import TransactionHistoryView from "@/react-app/components/patient/TransactionHistoryView";
 import { getLocalizedPrice } from "@/shared/currency-utils";

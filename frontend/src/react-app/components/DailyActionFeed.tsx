@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import { CheckCircle2, Circle, Flame, Loader2, Sparkles } from "lucide-react";
 
 interface Action {

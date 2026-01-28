@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import { X, Loader2, Phone, Lock, ArrowRight, Mail } from "lucide-react";
 
 export default function Login() {
@@ -18,9 +18,19 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      const profile = (user as any).profile;
-      if (profile?.onboarding_completed) {
-        navigate("/dashboard");
+      if (user.onboarding_completed) {
+        const accountType = user.account_type;
+        if (accountType === "business") {
+          navigate("/business-dashboard");
+        } else if (accountType === "individual") {
+          navigate("/dashboard");
+        } else if (accountType === "freelancer") {
+          navigate("/freelancer-dashboard");
+        } else if (accountType === "patient") {
+          navigate("/patient-dashboard");
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         navigate("/onboarding");
       }

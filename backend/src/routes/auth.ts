@@ -175,10 +175,14 @@ router.post('/otp/verify-phone', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/logout', (_req: Request, res: Response) => {
-  res.clearCookie('mavy_session');
-  res.clearCookie('mocha_session_token');
-  return res.json({ success: true });
+router.post('/logout', (_req: Request, res: Response) => {
+  res.clearCookie('mavy_session', {
+    httpOnly: true,
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  });
+  return res.json({ success: true, message: 'Logged out successfully' });
 });
 
 export default router;

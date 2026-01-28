@@ -1,9 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router";
-import { AuthProvider } from "@getmocha/users-service/react";
+import { AuthProvider } from "@/react-app/contexts/AuthContext";
 import { ToastProvider } from "@/react-app/components/ToastContainer";
 import "@/react-app/styles/animations.css";
 
-/* Pages */
 import HomePage from "@/react-app/pages/Home";
 import AuthCallbackPage from "@/react-app/pages/AuthCallback";
 import DashboardPage from "@/react-app/pages/Dashboard";
@@ -41,9 +40,7 @@ import InstructorDashboard from "@/react-app/pages/InstructorDashboard";
 import CoursePlayer from "@/react-app/pages/CoursePlayer";
 import Marketplace from "@/react-app/pages/Marketplace";
 
-/* -----------------------------
-   Routes configuration
------------------------------- */
+
 const appRoutes = [
   { path: "/", element: <HomePage /> },
   { path: "/login", element: <LoginPage /> },
@@ -94,9 +91,7 @@ const appRoutes = [
   { path: "/admin/booking-sync", element: <AdminBookingSyncPage /> },
 ];
 
-/* -----------------------------
-   App
------------------------------- */
+
 export default function App() {
   return (
     <AuthProvider>

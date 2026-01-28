@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import { Search, Download, FileText, Upload, MessageSquare, X, Plus, MoreHorizontal, Code, Flag } from "lucide-react";
 import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";

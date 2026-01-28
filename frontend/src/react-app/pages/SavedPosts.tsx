@@ -4,7 +4,7 @@ import NewsCard from "@/react-app/components/NewsCard";
 import CommentModal from "@/react-app/components/CommentModal";
 import ReportModal from "@/react-app/components/ReportModal";
 import { Bookmark, Check } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import type { NewsWithCounts } from "@/shared/types";
 
 export default function SavedPosts() {

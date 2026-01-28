@@ -21,7 +21,7 @@ import {
   UserCheck,
   Map
 } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import type { ExhibitionWithCounts } from "@/shared/exhibition-types";
 import ExhibitionShareModal from "./ExhibitionShareModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";

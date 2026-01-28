@@ -5,7 +5,7 @@ import CreateExhibitionModal from "@/react-app/components/CreateExhibitionModal"
 import ExhibitionCommentModal from "@/react-app/components/ExhibitionCommentModal";
 import EditExhibitionModal from "@/react-app/components/EditExhibitionModal";
 import { Calendar, Check, Plus, Sparkles } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import type { ExhibitionWithCounts } from "@/shared/exhibition-types";
 
 export default function Exhibitions() {

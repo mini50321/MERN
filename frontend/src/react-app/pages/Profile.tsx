@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import { useNavigate } from "react-router";
 import { User, Mail, Phone, MapPin, Award, Edit2, Save, Upload, FileText, Download, Trash2, Briefcase, GraduationCap, Code, CheckCircle, Plus, X, Instagram, Facebook, Linkedin, Globe, Users, Send, AlertCircle, Building2, Star, Receipt, IndianRupee } from "lucide-react";

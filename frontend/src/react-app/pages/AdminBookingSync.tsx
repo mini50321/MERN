@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import { Upload, Loader2, CheckCircle, AlertCircle, Download } from "lucide-react";
 import { useToast } from "@/react-app/components/ToastContainer";

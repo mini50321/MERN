@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Loader2, MapPin } from "lucide-react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [status, setStatus] = useState("Completing sign in...");
   const hasExchanged = useRef(false);
   const hasRedirected = useRef(false);
@@ -60,6 +62,9 @@ export default function AuthCallback() {
         if (!data.success) {
           throw new Error("Authentication failed");
         }
+        
+        // Refresh user data in auth context
+        await refreshUser();
         
         setStatus("Checking access level...");
         const adminCheckRes = await fetch("/api/check-admin", {

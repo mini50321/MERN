@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import { Package, Building2, CheckCircle, Shield, FileText, Image, File, MapPin, User, Mail, Phone } from "lucide-react";
 

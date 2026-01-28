@@ -13,7 +13,7 @@ import {
   Hash,
   Code
 } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import ShareModal from "@/react-app/components/ShareModal";
 import type { NewsWithCounts } from "@/shared/types";
 

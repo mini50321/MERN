@@ -3,7 +3,7 @@ import DashboardLayout from "@/react-app/components/DashboardLayout";
 import ExhibitionCard from "@/react-app/components/ExhibitionCard";
 import ExhibitionCommentModal from "@/react-app/components/ExhibitionCommentModal";
 import { Bookmark, Check } from "lucide-react";
-import { useAuth } from "@getmocha/users-service/react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 import type { ExhibitionWithCounts } from "@/shared/exhibition-types";
 
 export default function SavedExhibitions() {

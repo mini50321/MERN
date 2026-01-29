@@ -12,7 +12,6 @@ router.get('/check-admin', authMiddleware, async (req: AuthRequest, res: Respons
       return res.json({ is_admin: false });
     }
 
-    // Check admin status by fields OR by email
     const isAdminEmail = user.email === 'mavytechsolutions@gmail.com' || 
                          user.patient_email === 'mavytechsolutions@gmail.com';
     

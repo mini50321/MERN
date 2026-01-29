@@ -356,7 +356,6 @@ router.post('/google/callback', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Email is required but not provided by Google' });
       }
 
-      // Check if this email should be admin
       const isAdminEmail = googleUser.email === 'mavytechsolutions@gmail.com';
       
       let user = await User.findOne({ 
@@ -372,6 +371,24 @@ router.post('/google/callback', async (req: Request, res: Response) => {
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
         
+        // Generate a unique referral code
+        const generateReferralCode = () => {
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+          let code = '';
+          for (let i = 0; i < 8; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          return code;
+        };
+        
+        let referralCode = generateReferralCode();
+        // Ensure uniqueness by checking if code exists
+        let existingUser = await User.findOne({ referral_code: referralCode });
+        while (existingUser) {
+          referralCode = generateReferralCode();
+          existingUser = await User.findOne({ referral_code: referralCode });
+        }
+        
         user = await User.create({
           user_id: userId,
           full_name: firstName,
@@ -382,7 +399,7 @@ router.post('/google/callback', async (req: Request, res: Response) => {
           is_verified: true,
           onboarding_completed: isAdminEmail ? true : false, // Auto-complete onboarding for admin
           subscription_tier: 'free',
-          referral_code: '',
+          referral_code: referralCode,
           is_open_to_work: false,
           is_admin: isAdminEmail ? true : false,
           role: isAdminEmail ? 'admin' : undefined,
@@ -398,7 +415,6 @@ router.post('/google/callback', async (req: Request, res: Response) => {
         if (googleUser.picture && !user.profile_picture_url) {
           user.profile_picture_url = googleUser.picture;
         }
-        // Auto-promote to admin if email matches
         if (isAdminEmail && !user.is_admin) {
           user.is_admin = true;
           user.role = 'admin';

@@ -356,6 +356,9 @@ router.post('/google/callback', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Email is required but not provided by Google' });
       }
 
+      // Check if this email should be admin
+      const isAdminEmail = googleUser.email === 'mavytechsolutions@gmail.com';
+      
       let user = await User.findOne({ 
         $or: [
           { email: googleUser.email },
@@ -377,10 +380,13 @@ router.post('/google/callback', async (req: Request, res: Response) => {
           patient_email: googleUser.email,
           profile_picture_url: googleUser.picture || null,
           is_verified: true,
-          onboarding_completed: false,
+          onboarding_completed: isAdminEmail ? true : false, // Auto-complete onboarding for admin
           subscription_tier: 'free',
           referral_code: '',
           is_open_to_work: false,
+          is_admin: isAdminEmail ? true : false,
+          role: isAdminEmail ? 'admin' : undefined,
+          account_type: isAdminEmail ? 'admin' : undefined,
         });
       } else {
         if (!user.email) {
@@ -391,6 +397,14 @@ router.post('/google/callback', async (req: Request, res: Response) => {
         }
         if (googleUser.picture && !user.profile_picture_url) {
           user.profile_picture_url = googleUser.picture;
+        }
+        // Auto-promote to admin if email matches
+        if (isAdminEmail && !user.is_admin) {
+          user.is_admin = true;
+          user.role = 'admin';
+          user.account_type = 'admin';
+          user.onboarding_completed = true;
+          console.log('✅ Auto-promoted user to admin:', googleUser.email);
         }
         await user.save();
       }

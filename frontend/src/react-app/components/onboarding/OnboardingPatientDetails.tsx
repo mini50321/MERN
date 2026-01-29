@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { ChevronLeft, MapPin, Loader2, Gift, Check, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, MapPin, Loader2, Gift, Check, X, Mail } from "lucide-react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 
 interface OnboardingPatientDetailsProps {
   onComplete: (data: any) => void;
@@ -7,6 +8,7 @@ interface OnboardingPatientDetailsProps {
 }
 
 export default function OnboardingPatientDetails({ onComplete, onBack }: OnboardingPatientDetailsProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     patient_full_name: "",
     patient_contact: "",
@@ -21,6 +23,21 @@ export default function OnboardingPatientDetails({ onComplete, onBack }: Onboard
   const [referralCode, setReferralCode] = useState("");
   const [referralStatus, setReferralStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [referralMessage, setReferralMessage] = useState("");
+
+  // Load email from user's login account
+  useEffect(() => {
+    if (user) {
+      const userEmail = (user as any)?.profile?.email || 
+                        (user as any)?.profile?.patient_email || 
+                        (user as any)?.google_user_data?.email || 
+                        (user as any)?.email || 
+                        "";
+      
+      if (userEmail) {
+        setFormData(prev => ({ ...prev, patient_email: userEmail }));
+      }
+    }
+  }, [user]);
 
   const handleGetLocation = async () => {
     if (!("geolocation" in navigator)) {
@@ -150,15 +167,15 @@ export default function OnboardingPatientDetails({ onComplete, onBack }: Onboard
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Email Address <span className="text-xs text-gray-500">(from your login account)</span>
               </label>
-              <input
-                type="email"
-                value={formData.patient_email}
-                onChange={(e) => setFormData({ ...formData, patient_email: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
-                placeholder="your.email@example.com"
-              />
+              <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-300 text-gray-900">
+                <Mail className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                <span className="flex-1 truncate">
+                  {formData.patient_email || "Not available"}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">This email is from your login account and cannot be changed</p>
             </div>
           </div>
         </div>

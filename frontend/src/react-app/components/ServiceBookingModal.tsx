@@ -270,34 +270,36 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
   const loadProfileData = async () => {
     setIsLoadingProfile(true);
     try {
-      // Get current Indian Standard Time (IST - UTC+5:30)
       const now = new Date();
-      const istOffset = 5.5 * 60 * 60 * 1000; // IST offset in milliseconds
+      const istOffset = 5.5 * 60 * 60 * 1000; 
       const istTime = new Date(now.getTime() + istOffset);
       
-      // Format date as YYYY-MM-DD for input field
       const currentDate = istTime.toISOString().split('T')[0];
       
-      // Format time as HH:MM for input field
       const hours = istTime.getUTCHours().toString().padStart(2, '0');
       const minutes = istTime.getUTCMinutes().toString().padStart(2, '0');
       const currentTime = `${hours}:${minutes}`;
 
-      const response = await fetch("/api/users/me");
+      const response = await fetch("/api/users/me", { credentials: "include" });
       if (response.ok) {
         const data = await response.json();
         const profile = data.profile;
         
-        // Pre-fill form with profile data, login email, and current IST date/time
+        const userEmail = profile?.email || 
+                          profile?.patient_email || 
+                          (user as any)?.google_user_data?.email || 
+                          (user as any)?.email || 
+                          "";
+        
         if (profile) {
           setFormData({
-            patient_name: profile.patient_full_name || "",
-            patient_contact: profile.patient_contact || "",
-            patient_email: user?.google_user_data?.email || "",
-            address: profile.patient_address || "",
-            city: profile.patient_city || "",
+            patient_name: profile.patient_full_name || profile.full_name || "",
+            patient_contact: profile.patient_contact || profile.phone || "",
+            patient_email: userEmail,
+            address: profile.patient_address || profile.address || "",
+            city: profile.patient_city || profile.city || "",
             state: profile.state || "",
-            pincode: profile.patient_pincode || "",
+            pincode: profile.patient_pincode || profile.pincode || "",
             preferred_date: currentDate,
             preferred_time: currentTime,
             equipment_category: "",
@@ -306,8 +308,8 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
             patient_condition: "",
             issue_description: "",
             urgency: "normal",
-            latitude: profile.patient_latitude || null,
-            longitude: profile.patient_longitude || null,
+            latitude: profile.patient_latitude || profile.latitude || null,
+            longitude: profile.patient_longitude || profile.longitude || null,
             pickup_latitude: null,
             pickup_longitude: null,
             dropoff_latitude: null,
@@ -365,12 +367,10 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate ambulance locations
     if (isAmbulance) {
       if (!formData.pickup_latitude || !formData.pickup_longitude || 
           !formData.dropoff_latitude || !formData.dropoff_longitude) {
         setLocationError("Please select both pickup and drop-off locations on the map to proceed");
-        // Scroll to the location picker section
         const locationSection = document.getElementById("ambulance-location-section");
         if (locationSection) {
           locationSection.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -658,11 +658,31 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
 
             {/* Pricing Display - For nursing and physiotherapy */}
             {(isNursingService || isPhysiotherapyService) && (() => {
-              const priceData = isNursingService 
-                ? getNursingPrice(serviceType.name)
-                : getPhysiotherapyPrice(serviceType.name);
+              const serviceNameVariations = [
+                serviceType.name,
+                serviceType.name.toLowerCase(),
+                serviceType.name.toUpperCase(),
+                serviceType.description,
+                ...serviceType.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              ];
               
-              if (!priceData) return null;
+              let priceData = null;
+              for (const name of serviceNameVariations) {
+                priceData = isNursingService 
+                  ? getNursingPrice(name)
+                  : getPhysiotherapyPrice(name);
+                if (priceData) break;
+              }
+              
+              if (!priceData) {
+                return (
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ Price information is being loaded. Please continue with booking.
+                    </p>
+                  </div>
+                );
+              }
 
               const basePrice = formData.billing_frequency === 'monthly' && priceData.monthly_price
                 ? priceData.monthly_price
@@ -670,20 +690,18 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
                   ? (priceData as any).per_visit_price 
                   : (priceData as any).per_session_price;
 
-              // Calculate tier multiplier (simplified - actual calculation is in backend)
               let tierAdjustment = 0;
               const cityLower = (formData.city || '').toLowerCase();
               if (cityLower.includes('vizag') || cityLower.includes('visakhapatnam') || 
                   cityLower.includes('vijayawada') || cityLower.includes('guntur')) {
-                tierAdjustment = 20; // Tier-1: +20%
+                tierAdjustment = 20; 
               } else if (cityLower.includes('kakinada') || cityLower.includes('rajahmundry') || 
                          cityLower.includes('tirupati') || cityLower.includes('nellore')) {
-                tierAdjustment = 10; // Tier-2: +10%
+                tierAdjustment = 10; 
               }
 
               const afterTier = Math.round(basePrice * (1 + tierAdjustment / 100));
 
-              // Check for night duty (6 PM - 7 AM)
               let isNightDuty = false;
               if (formData.preferred_time) {
                 const hour = parseInt(formData.preferred_time.split(':')[0]);

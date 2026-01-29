@@ -36,6 +36,21 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    // Check KYC verification status
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.is_verified) {
+      return res.status(403).json({ 
+        error: 'KYC verification required',
+        message: 'Please complete your KYC verification before accepting service orders. You can submit your KYC documents from your profile settings.',
+        requires_kyc: true
+      });
+    }
+
     const order = await ServiceOrder.findById(req.params.id);
 
     if (!order) {
@@ -65,6 +80,21 @@ router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res: Respons
 
 router.post('/:id/decline', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    // Check KYC verification status
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.is_verified) {
+      return res.status(403).json({ 
+        error: 'KYC verification required',
+        message: 'Please complete your KYC verification before declining service orders. You can submit your KYC documents from your profile settings.',
+        requires_kyc: true
+      });
+    }
+
     const order = await ServiceOrder.findById(req.params.id);
 
     if (!order) {

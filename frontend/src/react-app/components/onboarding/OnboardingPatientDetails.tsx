@@ -24,7 +24,6 @@ export default function OnboardingPatientDetails({ onComplete, onBack }: Onboard
   const [referralStatus, setReferralStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [referralMessage, setReferralMessage] = useState("");
 
-  // Load email from user's login account
   useEffect(() => {
     if (user) {
       const userEmail = (user as any)?.profile?.email || 
@@ -61,8 +60,6 @@ export default function OnboardingPatientDetails({ onComplete, onBack }: Onboard
         patient_longitude: position.coords.longitude
       });
 
-      // Optionally, you can use reverse geocoding to get address
-      // For now, just inform the user
       alert(`Location captured: ${position.coords.latitude}, ${position.coords.longitude}`);
     } catch (error) {
       console.error("Location error:", error);
@@ -81,7 +78,6 @@ export default function OnboardingPatientDetails({ onComplete, onBack }: Onboard
 
     setReferralStatus('validating');
     try {
-      // Check if code exists by looking up the referrer
       const response = await fetch(`/api/referrals/validate?code=${encodeURIComponent(code.trim())}`);
       const data = await response.json();
       
@@ -108,7 +104,6 @@ export default function OnboardingPatientDetails({ onComplete, onBack }: Onboard
   };
 
   const handleSkip = () => {
-    // Skip profile completion but still save account type
     const dataWithReferral = {
       account_type: "patient",
       referral_code: referralStatus === 'valid' ? referralCode.trim().toUpperCase() : undefined

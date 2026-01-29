@@ -83,11 +83,10 @@ export default function Earn() {
   useEffect(() => {
     if (user) {
       checkKYCStatus();
-      fetchOrders(); // Initial load
+      fetchOrders(); 
       
-      // Auto-refresh orders every 10 seconds silently in background
       const interval = setInterval(() => {
-        fetchOrders(true); // Silent refresh - no loading state
+        fetchOrders(true); 
       }, 10000);
       
       return () => clearInterval(interval);
@@ -101,7 +100,6 @@ export default function Earn() {
       const data = await response.json();
       setKycData(data);
       
-      // Show KYC modal if not verified
       if (!data.status || data.status === "rejected") {
         setShowKYCModal(true);
       }
@@ -117,21 +115,16 @@ export default function Earn() {
       const response = await fetch("/api/service-orders");
       const data = await response.json();
       
-      // Check for new pending orders
       const pendingOrders = data.filter((o: ServiceOrder) => o.status === "pending");
       const currentPendingIds = new Set<number>(pendingOrders.map((o: ServiceOrder) => o.id));
       
-      // Find newly arrived orders (not in previous set)
       const newOrders = pendingOrders.filter((o: ServiceOrder) => 
         !previousPendingOrderIds.current.has(o.id)
       );
       
-      // Update the previous IDs for next comparison
       previousPendingOrderIds.current = currentPendingIds;
       
-      // Show notification for the most recent new order (only during background refreshes)
       if (newOrders.length > 0 && !isInitialLoad) {
-        // Sort by created_at and get the newest
         const newestOrder = newOrders.sort((a: ServiceOrder, b: ServiceOrder) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )[0];
@@ -149,7 +142,6 @@ export default function Earn() {
     }
   };
 
-  // Check if order is for nursing, physio, or ambulance (non-biomedical services)
   const isNonBiomedicalService = (order: ServiceOrder) => {
     const category = (order.service_category || "").toLowerCase();
     return category.includes("nursing") || 
@@ -158,7 +150,6 @@ export default function Earn() {
   };
 
   const handleAccept = (order: ServiceOrder) => {
-    // For nursing, physio, ambulance - direct accept with pre-calculated price (no quote form)
     if (isNonBiomedicalService(order)) {
       if (!order.quoted_price) {
         showError("Price not available for this service. Please contact support.");
@@ -166,7 +157,6 @@ export default function Earn() {
       }
       handleDirectAccept(order);
     } else {
-      // For biomedical services only - show quote form
       setSelectedOrder(order);
       setQuoteForm({
         quoted_price: "",
@@ -186,6 +176,7 @@ export default function Earn() {
       const response = await fetch(`/api/service-orders/${order.id}/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           service_type: order.service_type || order.service_category || "Service"
         })
@@ -196,7 +187,11 @@ export default function Earn() {
         fetchOrders();
       } else {
         const data = await response.json();
-        showError(data.error || "Failed to accept request");
+        if (data.requires_kyc) {
+          showError(data.message || "Please complete KYC verification before accepting orders.");
+        } else {
+          showError(data.error || "Failed to accept request");
+        }
       }
     } catch (error) {
       showError("Failed to accept request");
@@ -211,11 +206,22 @@ export default function Earn() {
     }
 
     try {
-      await fetch(`/api/service-orders/${orderId}/decline`, {
-        method: "POST"
+      const response = await fetch(`/api/service-orders/${orderId}/decline`, {
+        method: "POST",
+        credentials: "include"
       });
-      showSuccess("Order declined successfully");
-      fetchOrders();
+      
+      if (response.ok) {
+        showSuccess("Order declined successfully");
+        fetchOrders();
+      } else {
+        const data = await response.json();
+        if (data.requires_kyc) {
+          showError(data.message || "Please complete KYC verification before declining orders.");
+        } else {
+          showError(data.error || "Failed to decline order");
+        }
+      }
     } catch (error) {
       showError("Failed to decline order");
     }

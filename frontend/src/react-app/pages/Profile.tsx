@@ -183,12 +183,12 @@ export default function Profile() {
         return;
       }
       
-      // Load ratings for all accounts
-      loadRatings();
-      
-      // Load transactions for partner accounts
-      if (userProfile?.account_type === "partner") {
-        loadTransactions();
+      if (userProfile?.account_type !== "patient") {
+        loadRatings();
+        
+        if (userProfile?.account_type === "partner") {
+          loadTransactions();
+        }
       }
       
       const phoneNumber = userProfile?.phone || "";

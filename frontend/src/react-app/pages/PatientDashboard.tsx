@@ -1347,21 +1347,21 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
         const data = await response.json();
         const profile = data.profile;
         if (profile) {
-          const phoneNumber = profile.patient_contact || "";
+          const phoneNumber = profile.patient_contact || profile.phone || "";
+          const email = profile.email || profile.patient_email || "";
           const loadedData = {
-            patient_full_name: profile.patient_full_name || "",
+            patient_full_name: profile.patient_full_name || profile.full_name || "",
             patient_contact: phoneNumber,
-            patient_email: profile.patient_email || "",
-            patient_address: profile.patient_address || "",
-            patient_city: profile.patient_city || "",
-            patient_pincode: profile.patient_pincode || "",
-            patient_latitude: profile.patient_latitude || null,
-            patient_longitude: profile.patient_longitude || null
+            patient_email: email,
+            patient_address: profile.patient_address || profile.location || "",
+            patient_city: profile.patient_city || profile.city || "",
+            patient_pincode: profile.patient_pincode || profile.pincode || "",
+            patient_latitude: profile.patient_latitude || profile.latitude || null,
+            patient_longitude: profile.patient_longitude || profile.longitude || null
           };
           setProfileData(loadedData);
           setOriginalData(loadedData);
           setOriginalPhone(phoneNumber);
-          // Only consider verified if phone already exists in database
           setIsPhoneVerified(!!phoneNumber);
           setVerifiedPhone(phoneNumber);
         }
@@ -1573,9 +1573,10 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
             Email <span className="text-xs text-gray-500">(from login)</span>
           </label>
           <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg text-gray-900 border border-gray-200 text-sm">
-            <User className="w-4 h-4 text-gray-500" />
-            <span className="truncate">{user?.google_user_data?.email || "Not available"}</span>
+            <Mail className="w-4 h-4 text-gray-500" />
+            <span className="truncate">{(user as any)?.profile?.email || (user as any)?.profile?.patient_email || profileData.patient_email || (user as any)?.google_user_data?.email || (user as any)?.email || "Not available"}</span>
           </div>
+          <p className="text-xs text-gray-500 mt-1">This email cannot be changed as it's linked to your login account</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>

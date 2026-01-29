@@ -73,7 +73,11 @@ function NavLinks({
           <Link
             key={item.path}
             to={item.path}
-            onClick={onClick}
+            onClick={(e) => {
+              if (onClick) onClick();
+              // Ensure navigation happens
+              e.stopPropagation();
+            }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
               active
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"

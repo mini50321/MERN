@@ -28,6 +28,20 @@ export default function Onboarding() {
       navigate("/login");
       return;
     }
+    
+    if (user?.onboarding_completed) {
+      const accountType = user.account_type;
+      if (accountType === "patient") {
+        navigate("/patient-dashboard");
+      } else if (accountType === "business") {
+        navigate("/business-dashboard");
+      } else if (accountType === "freelancer") {
+        navigate("/freelancer-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+      return;
+    }
   }, [user, isPending, navigate]);
 
   const handleNext = (data: any) => {

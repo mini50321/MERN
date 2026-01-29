@@ -83,7 +83,20 @@ export default function AuthCallback() {
         });
         const profileData = await profileRes.json();
         
-        // Check if location needs to be set (for new users)
+        if (profileData.profile?.onboarding_completed) {
+          const accountType = profileData.profile?.account_type;
+          if (accountType === "patient") {
+            navigate("/patient-dashboard");
+          } else if (accountType === "business") {
+            navigate("/business-dashboard");
+          } else if (accountType === "freelancer") {
+            navigate("/freelancer-dashboard");
+          } else {
+            navigate("/dashboard");
+          }
+          return;
+        }
+        
         const needsLocation = !profileData.profile?.state || !profileData.profile?.country;
         
         if (needsLocation && "geolocation" in navigator) {
@@ -97,7 +110,6 @@ export default function AuthCallback() {
               });
             });
 
-            // Send location to backend to get state and country
             await fetch("/api/profile/set-location", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -108,7 +120,6 @@ export default function AuthCallback() {
             });
           } catch (error) {
             console.error("Location detection error:", error);
-            // Continue without location - user can request change later
           }
         }
         

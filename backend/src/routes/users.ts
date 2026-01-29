@@ -218,9 +218,21 @@ router.post('/complete', authMiddleware, async (req: AuthRequest, res: Response)
       return res.status(404).json({ error: 'User not found' });
     }
     
+    if (user.onboarding_completed) {
+      return res.status(400).json({ error: 'Onboarding has already been completed' });
+    }
+    
     const updateData: any = {
       onboarding_completed: true
     };
+    
+    if (!updateData.email && user.email) {
+      updateData.email = user.email;
+    }
+    
+    if (!updateData.patient_email && user.patient_email) {
+      updateData.patient_email = user.patient_email;
+    }
     
     if (onboardingData.account_type) {
       updateData.account_type = String(onboardingData.account_type);
@@ -287,6 +299,7 @@ router.post('/complete', authMiddleware, async (req: AuthRequest, res: Response)
     }
     
     if (onboardingData.email) {
+      updateData.email = String(onboardingData.email);
       updateData.patient_email = String(onboardingData.email);
     }
     

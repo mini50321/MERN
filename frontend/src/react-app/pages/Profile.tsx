@@ -800,7 +800,7 @@ export default function Profile() {
               </label>
               <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg text-gray-900 border border-gray-200">
                 <Mail className="w-5 h-5 text-gray-500" />
-                <span>{user?.google_user_data?.email || user?.email}</span>
+                <span>{(user as any)?.profile?.email || (user as any)?.profile?.patient_email || (user as any)?.google_user_data?.email || (user as any)?.email || 'Not set'}</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">This email cannot be changed as it's linked to your login account</p>
             </div>

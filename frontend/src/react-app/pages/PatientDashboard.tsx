@@ -21,7 +21,8 @@ import {
   Shield,
   AlertCircle,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Mail
 } from "lucide-react";
 import ServiceBookingModal from "@/react-app/components/ServiceBookingModal";
 import ServiceTypeSelectionModal from "@/react-app/components/ServiceTypeSelectionModal";
@@ -59,7 +60,6 @@ export default function PatientDashboard() {
     }
   }, []);
 
-  // Poll for notifications every 10 seconds
   useEffect(() => {
     if (!user) return;
 
@@ -69,15 +69,13 @@ export default function PatientDashboard() {
         if (response.ok) {
           const notifications = await response.json();
           
-          // Show only new notifications (ones we haven't seen before)
           const newNotifications = notifications.filter((n: any) => {
             if (lastNotificationIdRef.current === null) {
-              return false; // Skip all on first load to avoid spam
+              return false;
             }
             return n.id > (lastNotificationIdRef.current || 0);
           });
 
-          // Update last seen notification ID
           if (notifications.length > 0) {
             const maxId = Math.max(...notifications.map((n: any) => n.id));
             if (maxId > (lastNotificationIdRef.current || 0)) {
@@ -85,11 +83,9 @@ export default function PatientDashboard() {
             }
           }
 
-          // Show toast for each new notification
           for (const notification of newNotifications) {
             showNotification(notification.title, notification.message, notification.type);
             
-            // Mark as read after showing
             fetch(`/api/notifications/${notification.id}/read`, { method: "POST" }).catch(console.error);
           }
         }
@@ -98,7 +94,6 @@ export default function PatientDashboard() {
       }
     };
 
-    // Initialize - get current max notification ID without showing
     const initializeNotifications = async () => {
       try {
         const response = await fetch("/api/notifications?unread=true");
@@ -108,21 +103,17 @@ export default function PatientDashboard() {
             const maxId = Math.max(...notifications.map((n: any) => n.id));
             lastNotificationIdRef.current = maxId;
           } else {
-            // Initialize to 0 if no notifications exist yet
             lastNotificationIdRef.current = 0;
           }
         }
       } catch (error) {
         console.error("Error initializing notifications:", error);
-        // Initialize to 0 on error to allow future notifications
         lastNotificationIdRef.current = 0;
       }
     };
 
-    // Initialize on mount
     initializeNotifications();
 
-    // Start polling every 10 seconds
     pollingIntervalRef.current = setInterval(pollNotifications, 10000);
 
     return () => {
@@ -132,7 +123,6 @@ export default function PatientDashboard() {
     };
   }, [user, showNotification]);
 
-  // Show loading state while auth is being checked
   if (isPending) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 flex items-center justify-center">
@@ -447,17 +437,15 @@ function BookingsTab() {
   const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
-    loadBookings(true); // Initial load
+    loadBookings(true); 
     
-    // Auto-refresh bookings every 10 seconds silently in background
     const interval = setInterval(() => {
-      loadBookings(false); // Background refresh
+      loadBookings(false); 
     }, 10000);
     
     return () => clearInterval(interval);
   }, []);
 
-  // Filter bookings by status category
   const activeBookings = bookings.filter(b => 
     ["pending", "quote_sent", "accepted", "in_progress", "confirmed"].includes(b.status)
   );
@@ -473,7 +461,6 @@ function BookingsTab() {
     : cancelledBookings;
 
   const loadBookings = async (showLoading = false) => {
-    // Only show loading spinner on initial load, not on background refreshes
     if (showLoading && isInitialLoadRef.current) {
       setIsLoading(true);
     }
@@ -483,18 +470,14 @@ function BookingsTab() {
       if (response.ok) {
         const data = await response.json();
         
-        // Check for status changes and play sounds
         if (previousBookings.length > 0) {
           data.forEach((newBooking: any) => {
             const oldBooking = previousBookings.find((b: any) => b.id === newBooking.id);
             
             if (oldBooking && oldBooking.status !== newBooking.status) {
-              // Status changed - play appropriate sound
               if (newBooking.status === "accepted" && oldBooking.status !== "accepted") {
-                // Partner accepted the booking
                 playPartnerAcceptSound();
               } else if (newBooking.status === "completed" && oldBooking.status !== "completed") {
-                // Order completed
                 playOrderCompleteSound();
               }
             }
@@ -504,7 +487,6 @@ function BookingsTab() {
         setPreviousBookings(data);
         setBookings(data);
         
-        // Mark initial load as complete
         if (isInitialLoadRef.current) {
           isInitialLoadRef.current = false;
         }
@@ -512,7 +494,6 @@ function BookingsTab() {
     } catch (error) {
       console.error("Error loading bookings:", error);
     } finally {
-      // Only clear loading state if it was set
       if (showLoading && isLoading) {
         setIsLoading(false);
       }
@@ -525,7 +506,7 @@ function BookingsTab() {
         method: "POST"
       });
       if (response.ok) {
-        loadBookings(false); // Refresh without loading state
+        loadBookings(false); 
       }
     } catch (error) {
       console.error("Error accepting quote:", error);
@@ -538,7 +519,7 @@ function BookingsTab() {
         method: "POST"
       });
       if (response.ok) {
-        loadBookings(false); // Refresh without loading state
+        loadBookings(false); 
       }
     } catch (error) {
       console.error("Error declining quote:", error);
@@ -555,7 +536,7 @@ function BookingsTab() {
         method: "POST"
       });
       if (response.ok) {
-        loadBookings(false); // Refresh without loading state
+        loadBookings(false); 
       } else {
         const data = await response.json();
         alert(data.error || "Failed to cancel booking");
@@ -589,7 +570,7 @@ function BookingsTab() {
 
       if (response.ok) {
         setShowRatingModal(false);
-        loadBookings(false); // Refresh without loading state
+        loadBookings(false); 
       } else {
         alert("Failed to submit rating");
       }
@@ -1693,6 +1674,7 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
 }
 
 function SettingsTab({ onLogout }: { onLogout: () => void }) {
+  const { user } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(true);
   const [smsAlertsEnabled, setSmsAlertsEnabled] = useState(false);
@@ -1806,6 +1788,27 @@ function SettingsTab({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Settings</h2>
+      
+      {/* Profile Information */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
+        <div className="flex items-center gap-4 mb-4 border-b border-gray-200 pb-4">
+          <User className="w-6 h-6 text-teal-600" />
+          <h3 className="text-lg font-bold text-gray-900">Profile Information</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email <span className="text-xs text-gray-500">(from your login account)</span>
+            </label>
+            <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg text-gray-900 border border-gray-200">
+              <Mail className="w-5 h-5 text-gray-500" />
+              <span className="truncate">{(user as any)?.profile?.email || (user as any)?.profile?.patient_email || (user as any)?.google_user_data?.email || (user as any)?.email || 'Not set'}</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">This email cannot be changed as it's linked to your login account</p>
+          </div>
+        </div>
+      </div>
       
       {/* Notification Settings */}
       <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">

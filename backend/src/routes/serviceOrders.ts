@@ -1,4 +1,5 @@
 import express, { Response } from 'express';
+import mongoose from 'mongoose';
 import { ServiceOrder, User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
@@ -15,22 +16,17 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     const profession = (user.profession || '').toLowerCase();
     
-    // Build service category filter based on partner's profession
     let pendingOrdersCondition: any = {
       status: 'pending'
     };
     
     if (profession.includes('nursing') || profession.includes('nurse')) {
-      // Nursing partners only see nursing service requests
       pendingOrdersCondition.service_category = { $regex: /nursing/i };
     } else if (profession.includes('physio') || profession.includes('therapy')) {
-      // Physiotherapy partners only see physiotherapy service requests
       pendingOrdersCondition.service_category = { $regex: /physio/i };
     } else if (profession.includes('ambulance') || profession.includes('emergency') || profession.includes('ems')) {
-      // Ambulance providers only see ambulance service requests
       pendingOrdersCondition.service_category = { $regex: /ambulance/i };
     } else {
-      // Biomedical engineers see biomedical and equipment orders (not nursing/physio/ambulance)
       pendingOrdersCondition.$or = [
         { service_category: { $regex: /biomedical/i } },
         { service_category: { $regex: /equipment/i } },
@@ -49,12 +45,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       ];
     }
 
-    // Build the main query: pending orders matching partner's category OR orders assigned to this partner
     const query: any = {
       $or: [
-        // Pending orders that match partner's service category
         pendingOrdersCondition,
-        // Orders already assigned to this partner (regardless of category)
         { assigned_engineer_id: req.user!.user_id }
       ]
     };
@@ -98,8 +91,26 @@ router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res: Respons
     }
 
     console.log('KYC Check - Allowing request: User is verified');
+    console.log('Accept order - Order ID:', req.params.id);
 
-    const order = await ServiceOrder.findById(req.params.id);
+    let order;
+    try {
+      if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+        order = await ServiceOrder.findById(new mongoose.Types.ObjectId(req.params.id));
+      }
+      if (!order && mongoose.Types.ObjectId.isValid(req.params.id)) {
+        order = await ServiceOrder.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+      }
+      if (!order && !isNaN(parseInt(req.params.id))) {
+        order = await ServiceOrder.findOne({ order_number: parseInt(req.params.id) });
+      }
+    } catch (idError: any) {
+      console.error('Error finding order by ID:', idError);
+      return res.status(400).json({ 
+        error: 'Invalid order ID',
+        details: idError?.message || 'The provided order ID is not valid'
+      });
+    }
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
@@ -120,9 +131,13 @@ router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res: Respons
     await order.save();
 
     return res.json({ success: true, order });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Accept order error:', error);
-    return res.status(500).json({ error: 'Failed to accept order' });
+    console.error('Error details:', error?.message, error?.stack);
+    return res.status(500).json({ 
+      error: 'Failed to accept order',
+      details: error?.message || 'Unknown error'
+    });
   }
 });
 
@@ -147,8 +162,26 @@ router.post('/:id/decline', authMiddleware, async (req: AuthRequest, res: Respon
     }
 
     console.log('KYC Check (Decline) - Allowing request: User is verified');
+    console.log('Decline order - Order ID:', req.params.id);
 
-    const order = await ServiceOrder.findById(req.params.id);
+    let order;
+    try {
+      if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+        order = await ServiceOrder.findById(new mongoose.Types.ObjectId(req.params.id));
+      }
+      if (!order && mongoose.Types.ObjectId.isValid(req.params.id)) {
+        order = await ServiceOrder.findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+      }
+      if (!order && !isNaN(parseInt(req.params.id))) {
+        order = await ServiceOrder.findOne({ order_number: parseInt(req.params.id) });
+      }
+    } catch (idError: any) {
+      console.error('Error finding order by ID:', idError);
+      return res.status(400).json({ 
+        error: 'Invalid order ID',
+        details: idError?.message || 'The provided order ID is not valid'
+      });
+    }
 
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });

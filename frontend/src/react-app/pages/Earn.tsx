@@ -17,7 +17,8 @@ import {
   Star,
   Activity,
   MessageCircle,
-  RotateCcw
+  RotateCcw,
+  Shield
 } from "lucide-react";
 import { useToast } from "@/react-app/components/ToastContainer";
 
@@ -480,6 +481,17 @@ export default function Earn() {
               <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Earn</h1>
               <p className="text-gray-600 text-xs sm:text-base">Manage service orders from patients</p>
             </div>
+            {/* KYC Verification Button */}
+            {kycData && (!kycData.is_verified || kycData.status === "rejected") && (
+              <button
+                onClick={() => setShowKYCModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all flex items-center gap-2 text-sm sm:text-base"
+              >
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Complete KYC Verification</span>
+                <span className="sm:hidden">KYC</span>
+              </button>
+            )}
           </div>
         </div>
 

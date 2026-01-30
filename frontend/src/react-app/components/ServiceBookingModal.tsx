@@ -268,21 +268,43 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
         const data = await response.json();
         const profile = data.profile;
         
+        // Debug: Log profile data to see what fields are available
+        console.log("Profile data loaded:", {
+          patient_address: profile?.patient_address,
+          address: profile?.address,
+          location: profile?.location,
+          patient_pincode: profile?.patient_pincode,
+          pincode: profile?.pincode,
+          city: profile?.city,
+          patient_city: profile?.patient_city
+        });
+        
         const userEmail = profile?.email || 
                           profile?.patient_email || 
                           (user as any)?.google_user_data?.email || 
                           (user as any)?.email || 
                           "";
         
+        // Get address from multiple possible field names
+        const userAddress = profile?.patient_address || 
+                           profile?.address || 
+                           profile?.location || 
+                           "";
+        
+        // Get pincode from multiple possible field names
+        const userPincode = profile?.patient_pincode || 
+                           profile?.pincode || 
+                           "";
+        
         if (profile) {
           setFormData({
             patient_name: profile.patient_full_name || profile.full_name || "",
             patient_contact: profile.patient_contact || profile.phone || "",
             patient_email: userEmail,
-            address: profile.patient_address || profile.address || profile.location || "",
+            address: userAddress,
             city: profile.patient_city || profile.city || "",
             state: profile.state || "",
-            pincode: profile.patient_pincode || profile.pincode || "",
+            pincode: userPincode,
             preferred_date: currentDate,
             preferred_time: currentTime,
             equipment_category: "",

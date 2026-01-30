@@ -541,6 +541,74 @@ router.post('/:id/cancel', authMiddleware, async (req: AuthRequest, res: Respons
   }
 });
 
+router.put('/profile', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.user_id;
+    const updateData: any = {};
+
+    if (req.body.patient_full_name) {
+      updateData.full_name = String(req.body.patient_full_name);
+    }
+
+    if (req.body.patient_contact) {
+      updateData.phone = String(req.body.patient_contact);
+    }
+
+    if (req.body.patient_email) {
+      updateData.patient_email = String(req.body.patient_email);
+      if (!updateData.email) {
+        updateData.email = String(req.body.patient_email);
+      }
+    }
+
+    if (req.body.patient_address) {
+      updateData.location = String(req.body.patient_address);
+    }
+
+    if (req.body.patient_city) {
+      updateData.city = String(req.body.patient_city);
+    }
+
+    if (req.body.patient_pincode) {
+      updateData.pincode = String(req.body.patient_pincode);
+    }
+
+    if (req.body.patient_latitude !== null && req.body.patient_latitude !== undefined) {
+      updateData.patient_latitude = Number(req.body.patient_latitude);
+    }
+
+    if (req.body.patient_longitude !== null && req.body.patient_longitude !== undefined) {
+      updateData.patient_longitude = Number(req.body.patient_longitude);
+    }
+
+    if (req.body.state) {
+      updateData.state = String(req.body.state);
+    }
+
+    const user = await User.findOneAndUpdate(
+      { user_id: userId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({ 
+      success: true, 
+      profile: user,
+      message: 'Profile updated successfully'
+    });
+  } catch (error: any) {
+    console.error('Update patient profile error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to update profile',
+      details: error?.message || 'Unknown error'
+    });
+  }
+});
+
 router.post('/:id/rate', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { rating, review } = req.body;

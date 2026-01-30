@@ -12,6 +12,7 @@ export interface IUser extends Document {
   state?: string;
   country?: string;
   city?: string;
+  pincode?: string;
   profile_picture_url?: string;
   resume_url?: string;
   experience?: string;
@@ -61,6 +62,7 @@ const UserSchema = new Schema<IUser>({
   state: String,
   country: String,
   city: String,
+  pincode: String,
   profile_picture_url: String,
   resume_url: String,
   experience: String,

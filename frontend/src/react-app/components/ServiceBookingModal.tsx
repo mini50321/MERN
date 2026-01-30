@@ -268,7 +268,6 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
         const data = await response.json();
         const profile = data.profile;
         
-        // Debug: Log profile data to see what fields are available
         console.log("Profile data loaded:", {
           patient_address: profile?.patient_address,
           address: profile?.address,
@@ -285,13 +284,11 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
                           (user as any)?.email || 
                           "";
         
-        // Get address from multiple possible field names
         const userAddress = profile?.patient_address || 
                            profile?.address || 
                            profile?.location || 
                            "";
         
-        // Get pincode from multiple possible field names
         const userPincode = profile?.patient_pincode || 
                            profile?.pincode || 
                            "";

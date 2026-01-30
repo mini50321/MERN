@@ -7,6 +7,63 @@ router.get('/physiotherapy-prices', async (_req, res: Response) => {
     return res.json([
       {
         id: 1,
+        service_name: 'Basic Physiotherapy Session (Home Visit)',
+        per_session_price: 500,
+        monthly_price: 15000,
+        description: 'General musculoskeletal treatment and rehabilitation',
+        is_active: true
+      },
+      {
+        id: 2,
+        service_name: 'Post-Operative Physiotherapy',
+        per_session_price: 1000,
+        monthly_price: 30000,
+        description: 'Specialized recovery support after surgery',
+        is_active: true
+      },
+      {
+        id: 3,
+        service_name: 'Stroke / Neuro Rehabilitation',
+        per_session_price: 900,
+        monthly_price: 27000,
+        description: 'Recovery from stroke, spinal injury, or neurological conditions',
+        is_active: true
+      },
+      {
+        id: 4,
+        service_name: 'Elderly Physiotherapy',
+        per_session_price: 600,
+        monthly_price: 18000,
+        description: 'Mobility training and fall prevention for seniors',
+        is_active: true
+      },
+      {
+        id: 5,
+        service_name: 'Orthopedic Pain Management',
+        per_session_price: 700,
+        monthly_price: 21000,
+        description: 'Treatment for joint, bone, and muscle pain',
+        is_active: true
+      },
+      {
+        id: 6,
+        service_name: 'Pediatric Physiotherapy',
+        per_session_price: 700,
+        monthly_price: 21000,
+        description: 'Specialized therapy for infants and children',
+        is_active: true
+      },
+      {
+        id: 7,
+        service_name: 'Respiratory Physiotherapy',
+        per_session_price: 650,
+        monthly_price: 19500,
+        description: 'Breathing exercises and chest physiotherapy',
+        is_active: true
+      },
+      // Legacy/Alternative names for compatibility
+      {
+        id: 8,
         service_name: 'General Physiotherapy',
         per_session_price: 500,
         monthly_price: 15000,
@@ -14,7 +71,7 @@ router.get('/physiotherapy-prices', async (_req, res: Response) => {
         is_active: true
       },
       {
-        id: 2,
+        id: 9,
         service_name: 'Sports Injury Rehabilitation',
         per_session_price: 800,
         monthly_price: 24000,
@@ -22,7 +79,7 @@ router.get('/physiotherapy-prices', async (_req, res: Response) => {
         is_active: true
       },
       {
-        id: 3,
+        id: 10,
         service_name: 'Post-Surgical Rehabilitation',
         per_session_price: 1000,
         monthly_price: 30000,
@@ -39,8 +96,83 @@ router.get('/physiotherapy-prices', async (_req, res: Response) => {
 router.get('/nursing-prices', async (_req, res: Response) => {
   try {
     return res.json([
+      // Task-Based Services
       {
         id: 1,
+        service_name: 'Injection / IV / Simple Procedure',
+        per_visit_price: 400,
+        monthly_price: null,
+        description: 'IM/IV/SC injection, basic assistance',
+        is_active: true
+      },
+      {
+        id: 2,
+        service_name: 'Vitals Check',
+        per_visit_price: 300,
+        monthly_price: null,
+        description: 'BP, Sugar, SpO₂ monitoring',
+        is_active: true
+      },
+      {
+        id: 3,
+        service_name: 'Wound Dressing',
+        per_visit_price: 500,
+        monthly_price: null,
+        description: 'Simple wounds (consumables extra)',
+        is_active: true
+      },
+      {
+        id: 4,
+        service_name: 'Catheter / Ryles Tube Care',
+        per_visit_price: 600,
+        monthly_price: null,
+        description: 'Insertion, change, cleaning',
+        is_active: true
+      },
+      {
+        id: 5,
+        service_name: 'Nebulization / Oxygen Monitoring',
+        per_visit_price: 500,
+        monthly_price: null,
+        description: 'Respiratory therapy and oxygen support',
+        is_active: true
+      },
+      // Care-Based Home Nursing
+      {
+        id: 6,
+        service_name: 'General Home Nursing Visit',
+        per_visit_price: 600,
+        monthly_price: 18000,
+        description: 'Post-op care, medicines, hygiene, monitoring',
+        is_active: true
+      },
+      {
+        id: 7,
+        service_name: 'Post-Operative Home Nursing',
+        per_visit_price: 800,
+        monthly_price: 24000,
+        description: 'Specialized recovery support after surgery',
+        is_active: true
+      },
+      {
+        id: 8,
+        service_name: 'Elderly Care Nursing (Day Shift)',
+        per_visit_price: 700,
+        monthly_price: 21000,
+        description: 'Up to 8 hours daily support',
+        is_active: true
+      },
+      {
+        id: 9,
+        service_name: '24-Hour Elderly Nursing (Live-in)',
+        per_visit_price: 2500,
+        monthly_price: 75000,
+        description: 'Full-time residential care',
+        is_active: true
+      },
+      // Legacy/Alternative names for compatibility
+      {
+        id: 10,
         service_name: 'General Nursing Care',
         per_visit_price: 600,
         monthly_price: 18000,
@@ -48,7 +180,7 @@ router.get('/nursing-prices', async (_req, res: Response) => {
         is_active: true
       },
       {
-        id: 2,
+        id: 11,
         service_name: 'Critical Care Nursing',
         per_visit_price: 1200,
         monthly_price: 36000,
@@ -56,7 +188,7 @@ router.get('/nursing-prices', async (_req, res: Response) => {
         is_active: true
       },
       {
-        id: 3,
+        id: 12,
         service_name: 'Home Health Care',
         per_visit_price: 800,
         monthly_price: 24000,

@@ -21,9 +21,7 @@ interface ServiceBookingModalProps {
   };
 }
 
-// Medical equipment organized with home care products first
 const allMedicalEquipment = [
-  // Home Care Products (Quick Access)
   { category: "Home Care Products", name: "Oxygen Concentrator" },
   { category: "Home Care Products", name: "BiPAP Machine" },
   { category: "Home Care Products", name: "CPAP Machine" },
@@ -37,7 +35,6 @@ const allMedicalEquipment = [
   { category: "Home Care Products", name: "Patient Lift" },
   { category: "Home Care Products", name: "Suction Machine" },
   
-  // Diagnostic Imaging
   { category: "Diagnostic Imaging", name: "X-Ray Machine" },
   { category: "Diagnostic Imaging", name: "CT Scanner" },
   { category: "Diagnostic Imaging", name: "MRI Scanner" },
@@ -49,7 +46,6 @@ const allMedicalEquipment = [
   { category: "Diagnostic Imaging", name: "C-Arm Machine" },
   { category: "Diagnostic Imaging", name: "DEXA Scan Machine" },
   
-  // Patient Monitoring
   { category: "Patient Monitoring", name: "Patient Monitor" },
   { category: "Patient Monitoring", name: "ECG Machine" },
   { category: "Patient Monitoring", name: "Holter Monitor" },
@@ -59,7 +55,6 @@ const allMedicalEquipment = [
   { category: "Patient Monitoring", name: "Fetal Monitor" },
   { category: "Patient Monitoring", name: "Capnography Monitor" },
   
-  // Life Support & Critical Care
   { category: "Life Support & Critical Care", name: "Ventilator" },
   { category: "Life Support & Critical Care", name: "Anesthesia Machine" },
   { category: "Life Support & Critical Care", name: "ICU Ventilator" },
@@ -69,7 +64,6 @@ const allMedicalEquipment = [
   { category: "Life Support & Critical Care", name: "Syringe Pump" },
   { category: "Life Support & Critical Care", name: "ECMO Machine" },
   
-  // Laboratory Equipment
   { category: "Laboratory Equipment", name: "Hematology Analyzer" },
   { category: "Laboratory Equipment", name: "Biochemistry Analyzer" },
   { category: "Laboratory Equipment", name: "Blood Gas Analyzer" },
@@ -81,7 +75,6 @@ const allMedicalEquipment = [
   { category: "Laboratory Equipment", name: "PCR Machine" },
   { category: "Laboratory Equipment", name: "ELISA Reader" },
   
-  // Surgical & OT Equipment
   { category: "Surgical & OT Equipment", name: "Operation Table" },
   { category: "Surgical & OT Equipment", name: "Surgical Lights" },
   { category: "Surgical & OT Equipment", name: "Electrosurgical Unit (ESU)" },
@@ -93,13 +86,11 @@ const allMedicalEquipment = [
   { category: "Surgical & OT Equipment", name: "OT Suction Machine" },
   { category: "Surgical & OT Equipment", name: "Harmonic Scalpel" },
   
-  // Dialysis & Nephrology
   { category: "Dialysis & Nephrology", name: "Hemodialysis Machine" },
   { category: "Dialysis & Nephrology", name: "Peritoneal Dialysis Machine" },
   { category: "Dialysis & Nephrology", name: "Water Treatment System (RO Plant)" },
   { category: "Dialysis & Nephrology", name: "Dialysis Chair" },
   
-  // Neonatal & Pediatric
   { category: "Neonatal & Pediatric", name: "Infant Incubator" },
   { category: "Neonatal & Pediatric", name: "Infant Warmer" },
   { category: "Neonatal & Pediatric", name: "Phototherapy Unit" },
@@ -107,7 +98,6 @@ const allMedicalEquipment = [
   { category: "Neonatal & Pediatric", name: "NICU Monitor" },
   { category: "Neonatal & Pediatric", name: "Bili Blanket" },
   
-  // Therapy & Rehabilitation
   { category: "Therapy & Rehabilitation", name: "Physiotherapy Equipment" },
   { category: "Therapy & Rehabilitation", name: "Traction Unit" },
   { category: "Therapy & Rehabilitation", name: "Short Wave Diathermy" },
@@ -117,13 +107,11 @@ const allMedicalEquipment = [
   { category: "Therapy & Rehabilitation", name: "CPM Machine" },
   { category: "Therapy & Rehabilitation", name: "Laser Therapy Unit" },
   
-  // Sterilization & Disinfection
   { category: "Sterilization & Disinfection", name: "Medical Autoclave" },
   { category: "Sterilization & Disinfection", name: "ETO Sterilizer" },
   { category: "Sterilization & Disinfection", name: "UV Sterilizer" },
   { category: "Sterilization & Disinfection", name: "Washer Disinfector" },
   
-  // Dental Equipment
   { category: "Dental Equipment", name: "Dental Chair" },
   { category: "Dental Equipment", name: "Dental X-Ray Unit" },
   { category: "Dental Equipment", name: "Dental Autoclave" },
@@ -132,7 +120,6 @@ const allMedicalEquipment = [
   { category: "Dental Equipment", name: "Dental Compressor" },
   { category: "Dental Equipment", name: "Curing Light" },
   
-  // Other
   { category: "Other Equipment", name: "Other Equipment (Specify in description)" }
 ];
 
@@ -150,9 +137,8 @@ const patientConditions = [
   "Other (Specify in description)"
 ];
 
-// Function to calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Radius of the Earth in kilometers
+  const R = 6371; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -160,8 +146,8 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c; // Distance in kilometers
-  return Math.round(distance * 10) / 10; // Round to 1 decimal place
+  const distance = R * c; 
+  return Math.round(distance * 10) / 10; 
 }
 
 export default function ServiceBookingModal({ isOpen, onClose, service, serviceType }: ServiceBookingModalProps) {
@@ -213,7 +199,6 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
 
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
-  // Check if equipment selection should be shown
   const serviceTitle = service.title.toLowerCase().trim();
   const showEquipment = !serviceTitle.includes("nursing") && 
                        !serviceTitle.includes("physiotherapy") && 
@@ -224,7 +209,6 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
   const isNursingService = serviceTitle.includes("nursing");
   const isPhysiotherapyService = serviceTitle.includes("physiotherapy") || serviceTitle.includes("physio");
 
-  // Calculate distance when both locations are set
   useEffect(() => {
     if (isAmbulance && formData.pickup_latitude && formData.pickup_longitude && 
         formData.dropoff_latitude && formData.dropoff_longitude) {
@@ -240,7 +224,6 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
     }
   }, [formData.pickup_latitude, formData.pickup_longitude, formData.dropoff_latitude, formData.dropoff_longitude, isAmbulance]);
 
-  // Load profile data when modal opens
   useEffect(() => {
     if (isOpen) {
       setCurrentStep("form");
@@ -296,7 +279,7 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
             patient_name: profile.patient_full_name || profile.full_name || "",
             patient_contact: profile.patient_contact || profile.phone || "",
             patient_email: userEmail,
-            address: profile.patient_address || profile.address || "",
+            address: profile.patient_address || profile.address || profile.location || "",
             city: profile.patient_city || profile.city || "",
             state: profile.state || "",
             pincode: profile.patient_pincode || profile.pincode || "",
@@ -443,7 +426,6 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
     }
   };
 
-  // Render confirmation step
   if (currentStep === "confirm") {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">

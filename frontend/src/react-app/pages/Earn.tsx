@@ -333,9 +333,10 @@ export default function Earn() {
 
     setIsSubmitting(true);
     try {
-      await fetch(`/api/service-orders/${selectedOrder.id}/accept`, {
+      const response = await fetch(`/api/service-orders/${selectedOrder.id}/accept`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           service_type: selectedOrder.service_type || selectedOrder.service_category || "Service",
           quoted_price: parseFloat(quoteForm.quoted_price),
@@ -343,11 +344,21 @@ export default function Earn() {
         })
       });
       
-      showSuccess("Quote submitted successfully!");
-      setShowQuoteModal(false);
-      setSelectedOrder(null);
-      setQuoteForm({ quoted_price: "", engineer_notes: "" });
-      fetchOrders();
+      if (response.ok) {
+        showSuccess("Quote submitted successfully!");
+        setShowQuoteModal(false);
+        setSelectedOrder(null);
+        setQuoteForm({ quoted_price: "", engineer_notes: "" });
+        fetchOrders();
+      } else {
+        const data = await response.json();
+        if (data.requires_kyc) {
+          showError(data.message || "Please complete KYC verification before submitting quotes.");
+          setShowQuoteModal(false);
+        } else {
+          showError(data.error || "Failed to submit quote");
+        }
+      }
     } catch (error) {
       showError("Failed to submit quote");
     } finally {

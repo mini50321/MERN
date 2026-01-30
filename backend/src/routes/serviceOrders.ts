@@ -13,14 +13,56 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const profession = (user.profession || '').toLowerCase();
+    
+    // Build service category filter based on partner's profession
+    let pendingOrdersCondition: any = {
+      status: 'pending'
+    };
+    
+    if (profession.includes('nursing') || profession.includes('nurse')) {
+      // Nursing partners only see nursing service requests
+      pendingOrdersCondition.service_category = { $regex: /nursing/i };
+    } else if (profession.includes('physio') || profession.includes('therapy')) {
+      // Physiotherapy partners only see physiotherapy service requests
+      pendingOrdersCondition.service_category = { $regex: /physio/i };
+    } else if (profession.includes('ambulance') || profession.includes('emergency') || profession.includes('ems')) {
+      // Ambulance providers only see ambulance service requests
+      pendingOrdersCondition.service_category = { $regex: /ambulance/i };
+    } else {
+      // Biomedical engineers see biomedical and equipment orders (not nursing/physio/ambulance)
+      pendingOrdersCondition.$or = [
+        { service_category: { $regex: /biomedical/i } },
+        { service_category: { $regex: /equipment/i } },
+        { service_category: { $regex: /repair/i } },
+        { service_category: { $regex: /maintenance/i } },
+        { service_category: { $regex: /rental/i } },
+        { service_category: { $exists: false } },
+        { service_category: null },
+        {
+          $and: [
+            { service_category: { $not: { $regex: /nursing/i } } },
+            { service_category: { $not: { $regex: /physio/i } } },
+            { service_category: { $not: { $regex: /ambulance/i } } }
+          ]
+        }
+      ];
+    }
 
-    const orders = await ServiceOrder.find({
+    // Build the main query: pending orders matching partner's category OR orders assigned to this partner
+    const query: any = {
       $or: [
-        { status: 'pending' },
+        // Pending orders that match partner's service category
+        pendingOrdersCondition,
+        // Orders already assigned to this partner (regardless of category)
         { assigned_engineer_id: req.user!.user_id }
       ]
-    })
-    .sort({ created_at: -1 });
+    };
+
+    const orders = await ServiceOrder.find(query)
+      .sort({ created_at: -1 });
+
+    console.log(`[Service Orders] Partner profession: ${profession}, Found ${orders.length} orders matching service category filter`);
 
     const formattedOrders = orders.map(order => ({
       ...order.toObject(),

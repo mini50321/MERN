@@ -57,9 +57,70 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     console.log(`[Service Orders] Partner profession: ${profession}, Found ${orders.length} orders matching service category filter`);
 
-    const formattedOrders = orders.map(order => ({
-      ...order.toObject(),
-      id: order._id.toString()
+    const nursingPrices = [
+      { service_name: 'Injection / IV / Simple Procedure', per_visit_price: 400 },
+      { service_name: 'Vitals Check', per_visit_price: 300 },
+      { service_name: 'Wound Dressing', per_visit_price: 500 },
+      { service_name: 'Catheter / Ryles Tube Care', per_visit_price: 600 },
+      { service_name: 'Nebulization / Oxygen Monitoring', per_visit_price: 500 },
+      { service_name: 'General Home Nursing Visit', per_visit_price: 600 },
+      { service_name: 'Post-Operative Home Nursing', per_visit_price: 800 },
+      { service_name: 'Elderly Care Nursing (Day Shift)', per_visit_price: 700 },
+      { service_name: '24-Hour Elderly Nursing (Live-in)', per_visit_price: 2500 },
+      { service_name: 'General Nursing Care', per_visit_price: 600 }
+    ];
+    
+    const physioPrices = [
+      { service_name: 'Basic Physiotherapy Session (Home Visit)', per_session_price: 500 },
+      { service_name: 'Post-Operative Physiotherapy', per_session_price: 1000 },
+      { service_name: 'Stroke / Neuro Rehabilitation', per_session_price: 900 },
+      { service_name: 'Elderly Physiotherapy', per_session_price: 600 },
+      { service_name: 'Orthopedic Pain Management', per_session_price: 700 },
+      { service_name: 'Pediatric Physiotherapy', per_session_price: 700 },
+      { service_name: 'Respiratory Physiotherapy', per_session_price: 650 },
+      { service_name: 'General Physiotherapy', per_session_price: 500 },
+      { service_name: 'Sports Injury Rehabilitation', per_session_price: 800 },
+      { service_name: 'Post-Surgical Rehabilitation', per_session_price: 1000 }
+    ];
+
+    const formattedOrders = await Promise.all(orders.map(async (order) => {
+      const orderObj = order.toObject();
+      
+      if (!orderObj.quoted_price && orderObj.service_category) {
+        const category = (orderObj.service_category || "").toLowerCase();
+        const isNursing = category.includes("nursing");
+        const isPhysio = category.includes("physio");
+        
+        if (isNursing || isPhysio) {
+          const prices = isNursing ? nursingPrices : physioPrices;
+          const serviceType = (orderObj.service_type || "").toLowerCase();
+          
+          const priceData = prices.find((p: any) => {
+            const name = (p.service_name || "").toLowerCase();
+            return name.includes(serviceType) || serviceType.includes(name) ||
+                   serviceType.split(' ').some((word: string) => name.includes(word));
+          });
+          
+          if (priceData) {
+            const calculatedPrice = isNursing 
+              ? (priceData as any).per_visit_price 
+              : (priceData as any).per_session_price;
+            
+            if (calculatedPrice) {
+              orderObj.quoted_price = calculatedPrice;
+              
+              await ServiceOrder.findByIdAndUpdate(order._id, {
+                quoted_price: calculatedPrice
+              });
+            }
+          }
+        }
+      }
+      
+      return {
+        ...orderObj,
+        id: order._id.toString()
+      };
     }));
 
     return res.json(formattedOrders);

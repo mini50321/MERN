@@ -3,6 +3,8 @@ import { useAuth } from "@/react-app/contexts/AuthContext";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import KYCVerificationModal from "@/react-app/components/KYCVerificationModal";
 import PartnerOrderNotification from "@/react-app/components/PartnerOrderNotification";
+import { useNursingPrices } from "@/react-app/hooks/useNursingPrices";
+import { usePhysiotherapyPrices } from "@/react-app/hooks/usePhysiotherapyPrices";
 import { 
   DollarSign, 
   Clock, 
@@ -60,6 +62,8 @@ interface ServiceOrder {
 export default function Earn() {
   const { user } = useAuth();
   const { showSuccess, showError } = useToast();
+  const { getPriceForService: getNursingPrice } = useNursingPrices();
+  const { getPriceForService: getPhysiotherapyPrice } = usePhysiotherapyPrices();
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -152,11 +156,47 @@ export default function Earn() {
 
   const handleAccept = (order: ServiceOrder) => {
     if (isNonBiomedicalService(order)) {
-      if (!order.quoted_price) {
+      let priceToUse = order.quoted_price;
+      
+      if (!priceToUse) {
+        const category = (order.service_category || "").toLowerCase();
+        const isNursing = category.includes("nursing");
+        const isPhysio = category.includes("physio");
+        
+        if (isNursing || isPhysio) {
+          const serviceNameVariations = [
+            order.service_type,
+            order.service_type?.toLowerCase(),
+            order.service_type?.toUpperCase(),
+            ...(order.service_type?.split(' ') || []).map((word: string) => 
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            )
+          ];
+          
+          let priceData = null;
+          for (const name of serviceNameVariations) {
+            if (!name) continue;
+            priceData = isNursing 
+              ? getNursingPrice(name)
+              : getPhysiotherapyPrice(name);
+            if (priceData) break;
+          }
+          
+          if (priceData) {
+            priceToUse = isNursing 
+              ? (priceData as any).per_visit_price 
+              : (priceData as any).per_session_price;
+          }
+        }
+      }
+      
+      if (!priceToUse) {
         showError("Price not available for this service. Please contact support.");
         return;
       }
-      handleDirectAccept(order);
+      
+      const orderWithPrice = { ...order, quoted_price: priceToUse };
+      handleDirectAccept(orderWithPrice);
     } else {
       setSelectedOrder(order);
       setQuoteForm({

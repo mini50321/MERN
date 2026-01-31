@@ -691,5 +691,46 @@ router.put('/users/:userId/unblock', authMiddleware, async (req: AuthRequest, re
   }
 });
 
+router.delete('/users/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+    const currentUser = req.user;
+    
+    if (currentUser && userId === currentUser.user_id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    
+    console.log(`[Admin] DELETE /users/${userId} - Starting deletion, reason: ${reason || 'none'}`);
+    
+    await ServiceOrder.deleteMany({
+      $or: [
+        { patient_user_id: userId },
+        { assigned_engineer_id: userId }
+      ]
+    });
+    
+    const user = await User.findOneAndDelete({ user_id: userId });
+    
+    if (!user) {
+      console.log(`[Admin] User ${userId} not found`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log(`[Admin] Successfully deleted user ${userId} and all associated data`);
+    
+    return res.json({ 
+      success: true,
+      message: 'User and all associated data permanently deleted'
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to delete user',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
 

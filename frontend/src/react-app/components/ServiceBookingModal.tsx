@@ -408,6 +408,45 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
     setSubmitStatus("idle");
     setSubmitErrorMessage("");
 
+    let calculatedPrice = null;
+    if (isNursingService || isPhysiotherapyService) {
+      const serviceNameVariations = [
+        serviceType.name,
+        serviceType.name.toLowerCase(),
+        serviceType.name.toUpperCase(),
+        serviceType.description,
+        ...serviceType.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      ];
+      
+      let priceData = null;
+      for (const name of serviceNameVariations) {
+        priceData = isNursingService 
+          ? getNursingPrice(name)
+          : getPhysiotherapyPrice(name);
+        if (priceData) break;
+      }
+      
+      if (priceData) {
+        const basePrice = formData.billing_frequency === 'monthly' && priceData.monthly_price
+          ? priceData.monthly_price
+          : isNursingService 
+            ? (priceData as any).per_visit_price 
+            : (priceData as any).per_session_price;
+        
+        let tierAdjustment = 0;
+        const cityLower = (formData.city || '').toLowerCase();
+        if (cityLower.includes('vizag') || cityLower.includes('visakhapatnam') || 
+            cityLower.includes('vijayawada') || cityLower.includes('guntur')) {
+          tierAdjustment = 20; 
+        } else if (cityLower.includes('kakinada') || cityLower.includes('rajahmundry') || 
+                   cityLower.includes('tirupati') || cityLower.includes('nellore')) {
+          tierAdjustment = 15;
+        }
+        
+        calculatedPrice = Math.round(basePrice * (1 + tierAdjustment / 100));
+      }
+    }
+
     try {
       const response = await fetch("/api/bookings/submit", {
         method: "POST",
@@ -416,6 +455,8 @@ export default function ServiceBookingModal({ isOpen, onClose, service, serviceT
         body: JSON.stringify({
           service_type: serviceType.name,
           service_category: service.title,
+          quoted_price: calculatedPrice,
+          quoted_currency: calculatedPrice ? "INR" : null,
           ...formData
         })
       });

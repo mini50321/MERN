@@ -189,6 +189,35 @@ router.get('/manuals', authMiddleware, async (_req: AuthRequest, res: Response) 
   }
 });
 
+router.get('/partners', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const superAdminEmails = ['mavytechsolutions@gmail.com'];
+    
+    const partners = await User.find({
+      $or: [
+        { account_type: { $ne: 'patient' } },
+        { account_type: null }
+      ],
+      email: { $nin: superAdminEmails },
+      patient_email: { $nin: superAdminEmails }
+    })
+    .sort({ created_at: -1 })
+    .limit(1000)
+    .lean();
+    
+    const partnersWithRequests = partners.map(partner => ({
+      ...partner,
+      id: partner._id.toString(),
+      pending_location_requests: 0
+    }));
+    
+    return res.json(partnersWithRequests);
+  } catch (error) {
+    console.error('Get admin partners error:', error);
+    return res.status(500).json({ error: 'Failed to fetch partners' });
+  }
+});
+
 router.get('/patients', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     const patients = await User.find({ account_type: 'patient' }).sort({ created_at: -1 });
@@ -566,6 +595,99 @@ router.put('/patients/:userId/profile', authMiddleware, async (req: AuthRequest,
       error: 'Failed to update patient profile',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
+  }
+});
+
+router.get('/partner-orders/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const orders = await ServiceOrder.find({ assigned_engineer_id: userId })
+      .sort({ created_at: -1 })
+      .limit(100)
+      .lean();
+    
+    return res.json(orders.map(order => ({
+      id: order._id.toString(),
+      ...order
+    })));
+  } catch (error) {
+    console.error('Get partner orders error:', error);
+    return res.status(500).json({ error: 'Failed to fetch partner orders' });
+  }
+});
+
+router.put('/users/:userId/subscription', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { subscription_tier, reason } = req.body;
+    
+    if (!subscription_tier) {
+      return res.status(400).json({ error: 'Subscription tier is required' });
+    }
+    
+    const user = await User.findOneAndUpdate(
+      { user_id: userId },
+      { $set: { subscription_tier: subscription_tier } },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log(`[Admin] Updated user ${userId} subscription to ${subscription_tier}, reason=${reason || 'none'}`);
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Update subscription error:', error);
+    return res.status(500).json({ error: 'Failed to update subscription' });
+  }
+});
+
+router.put('/users/:userId/block', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+    
+    const user = await User.findOneAndUpdate(
+      { user_id: userId },
+      { $set: { is_blocked: true } },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log(`[Admin] Blocked user ${userId}, reason=${reason || 'none'}`);
+    
+    return res.json({ success: true, message: 'User blocked successfully' });
+  } catch (error) {
+    console.error('Block user error:', error);
+    return res.status(500).json({ error: 'Failed to block user' });
+  }
+});
+
+router.put('/users/:userId/unblock', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findOneAndUpdate(
+      { user_id: userId },
+      { $set: { is_blocked: false } },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log(`[Admin] Unblocked user ${userId}`);
+    
+    return res.json({ success: true, message: 'User unblocked successfully' });
+  } catch (error) {
+    console.error('Unblock user error:', error);
+    return res.status(500).json({ error: 'Failed to unblock user' });
   }
 });
 

@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd } from '../models/index.js';
+import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -303,10 +303,165 @@ router.get('/courses', authMiddleware, async (_req: AuthRequest, res: Response) 
 
 router.get('/subscription-plans', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
-    return res.json([]);
+    const plans = await SubscriptionPlan.find()
+      .sort({ display_order: 1 })
+      .lean();
+    
+    const formattedPlans = plans.map(plan => ({
+      id: parseInt(plan._id.toString().slice(-8), 16) || Date.now(),
+      tier_name: plan.tier_name,
+      monthly_price: plan.monthly_price,
+      yearly_price: plan.yearly_price,
+      currency: plan.currency,
+      benefits: plan.benefits,
+      is_active: plan.is_active,
+      display_order: plan.display_order,
+      created_at: plan.created_at.toISOString(),
+      updated_at: plan.updated_at.toISOString()
+    }));
+    
+    return res.json(formattedPlans);
   } catch (error) {
     console.error('Get admin subscription plans error:', error);
     return res.status(500).json({ error: 'Failed to fetch subscription plans' });
+  }
+});
+
+router.get('/subscription-settings', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const setting = await AppSetting.findOne({ setting_key: 'yearly_discount_percentage' });
+    
+    return res.json({
+      yearly_discount_percentage: setting ? parseInt(setting.setting_value) : 17
+    });
+  } catch (error) {
+    console.error('Get subscription settings error:', error);
+    return res.status(500).json({ error: 'Failed to fetch subscription settings' });
+  }
+});
+
+router.put('/subscription-settings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { yearly_discount_percentage } = req.body;
+    
+    if (yearly_discount_percentage === undefined || yearly_discount_percentage < 0 || yearly_discount_percentage > 100) {
+      return res.status(400).json({ error: 'Discount percentage must be between 0 and 100' });
+    }
+    
+    await AppSetting.findOneAndUpdate(
+      { setting_key: 'yearly_discount_percentage' },
+      { 
+        setting_key: 'yearly_discount_percentage',
+        setting_value: yearly_discount_percentage.toString()
+      },
+      { upsert: true, new: true }
+    );
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Update subscription settings error:', error);
+    return res.status(500).json({ error: 'Failed to update subscription settings' });
+  }
+});
+
+router.put('/subscription-plans/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const planId = req.params.id;
+    let plan;
+    let actualPlanId: string | null = null;
+    
+    if (planId.match(/^[0-9a-fA-F]{24}$/)) {
+      actualPlanId = planId;
+    } else {
+      const allPlans = await SubscriptionPlan.find().lean();
+      const found = allPlans.find(p => {
+        const idNum = parseInt(p._id.toString().slice(-8), 16);
+        return idNum === parseInt(planId, 10);
+      });
+      if (found) {
+        actualPlanId = found._id.toString();
+      }
+    }
+
+    if (!actualPlanId) {
+      return res.status(404).json({ error: 'Subscription plan not found' });
+    }
+
+    const updateData: any = {};
+    if (req.body.tier_name !== undefined) updateData.tier_name = req.body.tier_name;
+    if (req.body.monthly_price !== undefined) updateData.monthly_price = req.body.monthly_price;
+    if (req.body.yearly_price !== undefined) updateData.yearly_price = req.body.yearly_price;
+    if (req.body.currency !== undefined) updateData.currency = req.body.currency;
+    if (req.body.benefits !== undefined) updateData.benefits = req.body.benefits;
+    if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
+    if (req.body.display_order !== undefined) updateData.display_order = req.body.display_order;
+
+    plan = await SubscriptionPlan.findByIdAndUpdate(
+      actualPlanId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!plan) {
+      return res.status(404).json({ error: 'Subscription plan not found' });
+    }
+
+    const formattedPlan = {
+      id: parseInt(plan._id.toString().slice(-8), 16) || Date.now(),
+      tier_name: plan.tier_name,
+      monthly_price: plan.monthly_price,
+      yearly_price: plan.yearly_price,
+      currency: plan.currency,
+      benefits: plan.benefits,
+      is_active: plan.is_active,
+      display_order: plan.display_order,
+      created_at: plan.created_at.toISOString(),
+      updated_at: plan.updated_at.toISOString()
+    };
+
+    return res.json({ plan: formattedPlan, success: true });
+  } catch (error) {
+    console.error('Update subscription plan error:', error);
+    return res.status(500).json({ error: 'Failed to update subscription plan' });
+  }
+});
+
+router.put('/subscription-plans/:id/toggle-active', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const planId = req.params.id;
+    let plan;
+    let actualPlanId: string | null = null;
+    
+    if (planId.match(/^[0-9a-fA-F]{24}$/)) {
+      actualPlanId = planId;
+    } else {
+      const allPlans = await SubscriptionPlan.find().lean();
+      const found = allPlans.find(p => {
+        const idNum = parseInt(p._id.toString().slice(-8), 16);
+        return idNum === parseInt(planId, 10);
+      });
+      if (found) {
+        actualPlanId = found._id.toString();
+      }
+    }
+
+    if (!actualPlanId) {
+      return res.status(404).json({ error: 'Subscription plan not found' });
+    }
+
+    plan = await SubscriptionPlan.findById(actualPlanId);
+
+    if (!plan) {
+      return res.status(404).json({ error: 'Subscription plan not found' });
+    }
+
+    plan.is_active = !plan.is_active;
+    await plan.save();
+
+    return res.json({ success: true, is_active: plan.is_active });
+  } catch (error) {
+    console.error('Toggle subscription plan active error:', error);
+    return res.status(500).json({ error: 'Failed to toggle subscription plan active status' });
   }
 });
 

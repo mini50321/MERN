@@ -1,4 +1,5 @@
 import express, { type Response } from 'express';
+import { SubscriptionPlan, AppSetting } from '../models/index.js';
 
 const router = express.Router();
 
@@ -236,6 +237,43 @@ router.get('/ambulance-prices', async (_req, res: Response) => {
   } catch (error) {
     console.error('Get ambulance prices error:', error);
     return res.status(500).json({ error: 'Failed to fetch ambulance prices' });
+  }
+});
+
+router.get('/subscription-plans', async (_req, res: Response) => {
+  try {
+    const plans = await SubscriptionPlan.find({ is_active: true })
+      .sort({ display_order: 1 })
+      .lean();
+    
+    const formattedPlans = plans.map(plan => ({
+      id: parseInt(plan._id.toString().slice(-8), 16) || Date.now(),
+      tier_name: plan.tier_name,
+      monthly_price: plan.monthly_price,
+      yearly_price: plan.yearly_price,
+      currency: plan.currency,
+      benefits: plan.benefits,
+      is_active: plan.is_active,
+      display_order: plan.display_order
+    }));
+    
+    return res.json(formattedPlans);
+  } catch (error) {
+    console.error('Get subscription plans error:', error);
+    return res.status(500).json({ error: 'Failed to fetch subscription plans' });
+  }
+});
+
+router.get('/subscription-settings', async (_req, res: Response) => {
+  try {
+    const setting = await AppSetting.findOne({ setting_key: 'yearly_discount_percentage' });
+    
+    return res.json({
+      yearly_discount_percentage: setting ? parseInt(setting.setting_value) : 17
+    });
+  } catch (error) {
+    console.error('Get subscription settings error:', error);
+    return res.status(500).json({ error: 'Failed to fetch subscription settings' });
   }
 });
 

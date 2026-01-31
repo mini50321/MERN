@@ -52,3 +52,7 @@ export { ContactReply } from './ContactReply.js';
 export type { IContactReply } from './ContactReply.js';
 export { BannerAd } from './BannerAd.js';
 export type { IBannerAd } from './BannerAd.js';
+export { SubscriptionPlan } from './SubscriptionPlan.js';
+export type { ISubscriptionPlan } from './SubscriptionPlan.js';
+export { AppSetting } from './AppSetting.js';
+export type { IAppSetting } from './AppSetting.js';

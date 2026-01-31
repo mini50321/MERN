@@ -352,6 +352,19 @@ router.get('/content/pending-news', authMiddleware, async (_req: AuthRequest, re
   }
 });
 
+router.get('/content/pending-exhibitions', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const exhibitions = await Exhibition.find({ is_user_post: true })
+      .sort({ created_at: -1 })
+      .lean();
+    
+    return res.json(exhibitions);
+  } catch (error) {
+    console.error('Get pending exhibitions error:', error);
+    return res.status(500).json({ error: 'Failed to fetch pending exhibitions' });
+  }
+});
+
 router.post('/content/fetch', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json({

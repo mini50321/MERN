@@ -19,6 +19,17 @@ const countries = [
   "Chile", "Colombia", "Peru", "Other"
 ];
 
+const formatDateForInput = (dateString: string | null | undefined): string => {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+    return date.toISOString().split('T')[0];
+  } catch {
+    return "";
+  }
+};
+
 export default function EditExhibitionModal({ exhibition, isOpen, onClose, onSuccess }: EditExhibitionModalProps) {
   const [title, setTitle] = useState(exhibition.title);
   const [description, setDescription] = useState(exhibition.description || "");
@@ -28,8 +39,8 @@ export default function EditExhibitionModal({ exhibition, isOpen, onClose, onSuc
   const [state, setState] = useState((exhibition as any).state || "");
   const [country, setCountry] = useState((exhibition as any).country || "");
   const [googleMapsUrl, setGoogleMapsUrl] = useState((exhibition as any).google_maps_url || "");
-  const [startDate, setStartDate] = useState(exhibition.event_start_date || "");
-  const [endDate, setEndDate] = useState(exhibition.event_end_date || "");
+  const [startDate, setStartDate] = useState(formatDateForInput(exhibition.event_start_date));
+  const [endDate, setEndDate] = useState(formatDateForInput(exhibition.event_end_date));
   const [organizerName, setOrganizerName] = useState(exhibition.organizer_name || "");
   const [registrationUrl, setRegistrationUrl] = useState((exhibition as any).registration_url || exhibition.website_url || "");
   const [contactNumber, setContactNumber] = useState(exhibition.contact_number || "");

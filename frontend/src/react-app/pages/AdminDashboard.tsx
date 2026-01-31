@@ -45,6 +45,7 @@ import EditJobModal from "@/react-app/components/EditJobModal";
 import EditFundraiserModal from "@/react-app/components/EditFundraiserModal";
 import EditCourseModal from "@/react-app/components/EditCourseModal";
 import EditServiceModal from "@/react-app/components/EditServiceModal";
+import EditServiceManualModal from "@/react-app/components/EditServiceManualModal";
 import AnalyticsOverview from "@/react-app/components/AnalyticsOverview";
 import AdvertisingPanel from "@/react-app/components/AdvertisingPanel";
 import PartnerManagementPanel from "@/react-app/components/PartnerManagementPanel";
@@ -1004,13 +1005,78 @@ function ServicesManagementPanel({ services, canEdit, onReload }: { services: an
   );
 }
 
-function ManualsManagementPanel({ manuals, canEdit }: { manuals: any[]; onReload: () => void; canEdit: boolean }) {
+function ManualsManagementPanel({ manuals, canEdit, onReload }: { manuals: any[]; onReload: () => void; canEdit: boolean }) {
+  const [editingManual, setEditingManual] = useState<any | null>(null);
+  const [manualToDelete, setManualToDelete] = useState<any | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleDeleteManual = async (manualId: string | number) => {
+    try {
+      const res = await fetch(`/api/manuals/${manualId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        alert("Manual deleted successfully");
+        setManualToDelete(null);
+        onReload();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete manual");
+      }
+    } catch (error) {
+      console.error("Error deleting manual:", error);
+      alert("An error occurred while deleting the manual");
+    }
+  };
+
+  const handleUploadManual = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setUploading(true);
+    const formData = new FormData(e.currentTarget);
+
+    try {
+      const res = await fetch("/api/manuals/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        alert("Manual uploaded successfully");
+        setShowUploadModal(false);
+        (e.target as HTMLFormElement).reset();
+        onReload();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to upload manual");
+      }
+    } catch (error) {
+      console.error("Error uploading manual:", error);
+      alert("An error occurred while uploading the manual");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const equipmentTypes = [
+    "Imaging",
+    "Laboratory",
+    "Life Support",
+    "Patient Monitoring",
+    "Surgical",
+    "Therapeutic"
+  ];
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
         <div />
         {canEdit && (
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button 
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <Plus className="w-4 h-4" />
             Upload Manual
           </button>
@@ -1036,14 +1102,20 @@ function ManualsManagementPanel({ manuals, canEdit }: { manuals: any[]; onReload
                 <td className="py-3 px-4">{manual.manufacturer || "N/A"}</td>
                 <td className="py-3 px-4">{manual.model_number || "N/A"}</td>
                 <td className="py-3 px-4">{manual.equipment_type || "N/A"}</td>
-                <td className="py-3 px-4">{manual.download_count}</td>
+                <td className="py-3 px-4">{manual.download_count || 0}</td>
                 <td className="py-3 px-4">
                   {canEdit ? (
                     <div className="flex gap-2">
-                      <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">
+                      <button 
+                        onClick={() => setEditingManual(manual)}
+                        className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+                      <button 
+                        onClick={() => setManualToDelete(manual)}
+                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -1056,6 +1128,148 @@ function ManualsManagementPanel({ manuals, canEdit }: { manuals: any[]; onReload
           </tbody>
         </table>
       </div>
+
+      {editingManual && (
+        <EditServiceManualModal
+          manual={editingManual}
+          isOpen={!!editingManual}
+          onClose={() => setEditingManual(null)}
+          onSuccess={() => {
+            setEditingManual(null);
+            onReload();
+          }}
+        />
+      )}
+
+      {manualToDelete && (
+        <DeleteConfirmModal
+          isOpen={!!manualToDelete}
+          onClose={() => setManualToDelete(null)}
+          onConfirm={() => handleDeleteManual(manualToDelete.id)}
+          title="Delete Manual"
+          message="Are you sure you want to delete this manual?"
+        />
+      )}
+
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Upload Manual</h2>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadManual} className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Manual Title *
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    required
+                    placeholder="e.g., GE LOGIQ E9 User Manual"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Manufacturer
+                    </label>
+                    <input
+                      type="text"
+                      name="manufacturer"
+                      placeholder="e.g., GE Healthcare"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Model Number
+                    </label>
+                    <input
+                      type="text"
+                      name="model_number"
+                      placeholder="e.g., LOGIQ E9"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Equipment Type
+                  </label>
+                  <select
+                    name="equipment_type"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">Select type (optional)</option>
+                    {equipmentTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    placeholder="Brief description of the manual..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    PDF File *
+                  </label>
+                  <input
+                    type="file"
+                    name="file"
+                    accept="application/pdf"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Only PDF files are allowed (max 50MB)</p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all"
+                  disabled={uploading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? "Uploading..." : "Upload Manual"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual } from '../models/index.js';
+import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -401,6 +401,133 @@ router.put('/dynamic-pricing/emergency', authMiddleware, async (_req: AuthReques
   } catch (error) {
     console.error('Update emergency pricing error:', error);
     return res.status(500).json({ error: 'Failed to update emergency pricing' });
+  }
+});
+
+router.get('/patients/:userId/bookings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const orders = await ServiceOrder.find({ patient_user_id: userId })
+      .sort({ created_at: -1 })
+      .populate('assigned_engineer_id', 'name email phone')
+      .lean();
+    
+    return res.json(orders.map(order => ({
+      id: order._id.toString(),
+      ...order
+    })));
+  } catch (error) {
+    console.error('Get patient bookings error:', error);
+    return res.status(500).json({ error: 'Failed to fetch patient bookings' });
+  }
+});
+
+router.get('/all-patient-orders', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const orders = await ServiceOrder.find()
+      .sort({ created_at: -1 })
+      .populate('patient_user_id', 'name email phone patient_email')
+      .populate('assigned_engineer_id', 'name email phone')
+      .lean();
+    
+    return res.json(orders.map(order => ({
+      id: order._id.toString(),
+      ...order
+    })));
+  } catch (error) {
+    console.error('Get all patient orders error:', error);
+    return res.status(500).json({ error: 'Failed to fetch all patient orders' });
+  }
+});
+
+router.put('/patients/:userId/block', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findOneAndUpdate(
+      { user_id: userId, account_type: 'patient' },
+      { $set: { is_blocked: true } },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    
+    return res.json({ success: true, message: 'Patient blocked successfully' });
+  } catch (error) {
+    console.error('Block patient error:', error);
+    return res.status(500).json({ error: 'Failed to block patient' });
+  }
+});
+
+router.put('/patients/:userId/unblock', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findOneAndUpdate(
+      { user_id: userId, account_type: 'patient' },
+      { $set: { is_blocked: false } },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    
+    return res.json({ success: true, message: 'Patient unblocked successfully' });
+  } catch (error) {
+    console.error('Unblock patient error:', error);
+    return res.status(500).json({ error: 'Failed to unblock patient' });
+  }
+});
+
+router.put('/patients/:userId/profile', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const updateData = req.body;
+    
+    const user = await User.findOneAndUpdate(
+      { user_id: userId, account_type: 'patient' },
+      { $set: updateData },
+      { new: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    
+    return res.json({ 
+      success: true, 
+      message: 'Patient profile updated successfully',
+      patient: {
+        id: user._id.toString(),
+        ...user.toObject()
+      }
+    });
+  } catch (error) {
+    console.error('Update patient profile error:', error);
+    return res.status(500).json({ error: 'Failed to update patient profile' });
+  }
+});
+
+router.delete('/patients/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    await ServiceOrder.deleteMany({ patient_user_id: userId });
+    
+    const user = await User.findOneAndDelete({ 
+      user_id: userId, 
+      account_type: 'patient' 
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    
+    return res.json({ success: true, message: 'Patient deleted successfully' });
+  } catch (error) {
+    console.error('Delete patient error:', error);
+    return res.status(500).json({ error: 'Failed to delete patient' });
   }
 });
 

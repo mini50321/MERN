@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from 'express';
-import { Job } from '../models/index.js';
+import { Job, User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -71,37 +71,53 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const jobId = req.params.id;
+    const userId = req.user!.user_id;
+    const user = await User.findOne({ user_id: userId });
+    const isAdmin = user?.is_admin === true || 
+                    user?.role === 'admin' || 
+                    user?.role === 'super_admin' ||
+                    user?.email === 'mavytechsolutions@gmail.com' ||
+                    user?.patient_email === 'mavytechsolutions@gmail.com';
+    
     let job;
+    let actualJobId: string | null = null;
     
     if (jobId.match(/^[0-9a-fA-F]{24}$/)) {
-      job = await Job.findOneAndUpdate(
-        { 
-          _id: jobId,
-          posted_by_user_id: req.user!.user_id 
-        },
-        { $set: req.body },
-        { new: true }
-      );
+      actualJobId = jobId;
     } else {
-      const allJobs = await Job.find({ posted_by_user_id: req.user!.user_id }).lean();
+      const allJobs = await Job.find().lean();
       const found = allJobs.find(j => {
         const idNum = parseInt(j._id.toString().slice(-8), 16);
         return idNum === parseInt(jobId, 10);
       });
       if (found) {
-        job = await Job.findOneAndUpdate(
-          { 
-            _id: found._id,
-            posted_by_user_id: req.user!.user_id 
-          },
-          { $set: req.body },
-          { new: true }
-        );
+        actualJobId = found._id.toString();
       }
     }
 
-    if (!job) {
+    if (!actualJobId) {
       return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (isAdmin) {
+      job = await Job.findByIdAndUpdate(
+        actualJobId,
+        { $set: req.body },
+        { new: true, runValidators: true }
+      );
+    } else {
+      job = await Job.findOneAndUpdate(
+        { 
+          _id: actualJobId,
+          posted_by_user_id: userId 
+        },
+        { $set: req.body },
+        { new: true, runValidators: true }
+      );
+    }
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found or user not authorized' });
     }
 
     return res.json({ job, success: true });
@@ -114,29 +130,45 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const jobId = req.params.id;
+    const userId = req.user!.user_id;
+    const user = await User.findOne({ user_id: userId });
+    const isAdmin = user?.is_admin === true || 
+                    user?.role === 'admin' || 
+                    user?.role === 'super_admin' ||
+                    user?.email === 'mavytechsolutions@gmail.com' ||
+                    user?.patient_email === 'mavytechsolutions@gmail.com';
+    
     let job;
+    let actualJobId: string | null = null;
     
     if (jobId.match(/^[0-9a-fA-F]{24}$/)) {
-      job = await Job.findOne({ 
-        _id: jobId,
-        posted_by_user_id: req.user!.user_id 
-      });
+      actualJobId = jobId;
     } else {
-      const allJobs = await Job.find({ posted_by_user_id: req.user!.user_id }).lean();
+      const allJobs = await Job.find().lean();
       const found = allJobs.find(j => {
         const idNum = parseInt(j._id.toString().slice(-8), 16);
         return idNum === parseInt(jobId, 10);
       });
       if (found) {
-        job = await Job.findOne({ 
-          _id: found._id,
-          posted_by_user_id: req.user!.user_id 
-        });
+        actualJobId = found._id.toString();
       }
     }
 
-    if (!job) {
+    if (!actualJobId) {
       return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (isAdmin) {
+      job = await Job.findById(actualJobId);
+    } else {
+      job = await Job.findOne({ 
+        _id: actualJobId,
+        posted_by_user_id: userId 
+      });
+    }
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found or user not authorized' });
     }
 
     await Job.findByIdAndDelete(job._id);

@@ -56,3 +56,5 @@ export { SubscriptionPlan } from './SubscriptionPlan.js';
 export type { ISubscriptionPlan } from './SubscriptionPlan.js';
 export { AppSetting } from './AppSetting.js';
 export type { IAppSetting } from './AppSetting.js';
+export { KYCSubmission } from './KYCSubmission.js';
+export type { IKYCSubmission } from './KYCSubmission.js';

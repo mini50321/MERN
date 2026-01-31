@@ -396,8 +396,8 @@ router.post('/google/callback', async (req: Request, res: Response) => {
           email: googleUser.email,
           patient_email: googleUser.email,
           profile_picture_url: googleUser.picture || null,
-          is_verified: true,
-          onboarding_completed: isAdminEmail ? true : false, // Auto-complete onboarding for admin
+          is_verified: isAdminEmail ? true : false,
+          onboarding_completed: isAdminEmail ? true : false,
           subscription_tier: 'free',
           referral_code: referralCode,
           is_open_to_work: false,

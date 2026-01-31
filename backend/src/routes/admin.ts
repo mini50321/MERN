@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting } from '../models/index.js';
+import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting, KYCSubmission } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -467,10 +467,140 @@ router.put('/subscription-plans/:id/toggle-active', authMiddleware, async (req: 
 
 router.get('/kyc', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
-    return res.json([]);
+    const submissions = await KYCSubmission.find()
+      .sort({ submitted_at: -1 })
+      .lean();
+    
+    const submissionsWithUser = await Promise.all(submissions.map(async (submission) => {
+      const user = await User.findOne({ user_id: submission.user_id }).lean();
+      return {
+        id: parseInt(submission._id.toString().slice(-8), 16) || Date.now(),
+        user_id: submission.user_id,
+        full_name: submission.full_name,
+        user_name: user?.full_name || user?.email || 'Unknown',
+        user_email: user?.email || null,
+        id_proof_url: submission.id_proof_url,
+        pan_card_url: submission.pan_card_url,
+        experience_certificate_url: submission.experience_certificate_url,
+        status: submission.status,
+        rejection_reason: submission.rejection_reason || null,
+        reviewed_by_admin_id: submission.reviewed_by_admin_id || null,
+        submitted_at: submission.submitted_at.toISOString(),
+        reviewed_at: submission.reviewed_at ? submission.reviewed_at.toISOString() : null,
+        created_at: submission.created_at.toISOString()
+      };
+    }));
+    
+    return res.json(submissionsWithUser);
   } catch (error) {
     console.error('Get admin KYC error:', error);
     return res.status(500).json({ error: 'Failed to fetch KYC submissions' });
+  }
+});
+
+router.put('/kyc/:id/approve', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const kycId = req.params.id;
+    const adminId = req.user!.user_id;
+    
+    let submission;
+    let actualKYCId: string | null = null;
+    
+    if (kycId.match(/^[0-9a-fA-F]{24}$/)) {
+      actualKYCId = kycId;
+    } else {
+      const allSubmissions = await KYCSubmission.find().lean();
+      const found = allSubmissions.find(s => {
+        const idNum = parseInt(s._id.toString().slice(-8), 16);
+        return idNum === parseInt(kycId, 10);
+      });
+      if (found) {
+        actualKYCId = found._id.toString();
+      }
+    }
+
+    if (!actualKYCId) {
+      return res.status(404).json({ error: 'KYC submission not found' });
+    }
+
+    submission = await KYCSubmission.findById(actualKYCId);
+
+    if (!submission) {
+      return res.status(404).json({ error: 'KYC submission not found' });
+    }
+
+    if (submission.status === 'approved') {
+      return res.status(400).json({ error: 'KYC already approved' });
+    }
+
+    submission.status = 'approved';
+    submission.reviewed_by_admin_id = adminId;
+    submission.reviewed_at = new Date();
+    await submission.save();
+
+    await User.findOneAndUpdate(
+      { user_id: submission.user_id },
+      { $set: { is_verified: true } }
+    );
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Approve KYC error:', error);
+    return res.status(500).json({ error: 'Failed to approve KYC' });
+  }
+});
+
+router.put('/kyc/:id/reject', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const kycId = req.params.id;
+    const adminId = req.user!.user_id;
+    const { rejection_reason } = req.body;
+    
+    if (!rejection_reason) {
+      return res.status(400).json({ error: 'Rejection reason is required' });
+    }
+    
+    let submission;
+    let actualKYCId: string | null = null;
+    
+    if (kycId.match(/^[0-9a-fA-F]{24}$/)) {
+      actualKYCId = kycId;
+    } else {
+      const allSubmissions = await KYCSubmission.find().lean();
+      const found = allSubmissions.find(s => {
+        const idNum = parseInt(s._id.toString().slice(-8), 16);
+        return idNum === parseInt(kycId, 10);
+      });
+      if (found) {
+        actualKYCId = found._id.toString();
+      }
+    }
+
+    if (!actualKYCId) {
+      return res.status(404).json({ error: 'KYC submission not found' });
+    }
+
+    submission = await KYCSubmission.findById(actualKYCId);
+
+    if (!submission) {
+      return res.status(404).json({ error: 'KYC submission not found' });
+    }
+
+    submission.status = 'rejected';
+    submission.rejection_reason = rejection_reason;
+    submission.reviewed_by_admin_id = adminId;
+    submission.reviewed_at = new Date();
+    await submission.save();
+
+    await User.findOneAndUpdate(
+      { user_id: submission.user_id },
+      { $set: { is_verified: false } }
+    );
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Reject KYC error:', error);
+    return res.status(500).json({ error: 'Failed to reject KYC' });
   }
 });
 

@@ -216,29 +216,47 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const newsId = req.params.id;
     const userId = req.user!.user_id;
+    
+    const user = await User.findOne({ user_id: userId });
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    const isAdminEmail = user.email === 'mavytechsolutions@gmail.com' || 
+                         user.patient_email === 'mavytechsolutions@gmail.com';
+    const isAdmin = user.is_admin === true || 
+                    user.role === 'admin' ||
+                    user.account_type === 'admin' ||
+                    isAdminEmail;
+    
     let news;
-
+    let findQuery: any = {};
+    
     if (newsId.match(/^[0-9a-fA-F]{24}$/)) {
+      findQuery._id = newsId;
+      if (!isAdmin) {
+        findQuery.posted_by_user_id = userId;
+      }
       news = await NewsUpdate.findOneAndUpdate(
-        { 
-          _id: newsId,
-          posted_by_user_id: userId 
-        },
+        findQuery,
         { $set: req.body },
         { new: true }
       );
     } else {
-      const allNews = await NewsUpdate.find({ posted_by_user_id: userId }).lean();
+      const numericId = parseInt(newsId, 10);
+      const allNews = await NewsUpdate.find(isAdmin ? {} : { posted_by_user_id: userId }).lean();
       const found = allNews.find(n => {
         const idNum = parseInt(n._id.toString().slice(-8), 16);
-        return idNum === parseInt(newsId, 10);
+        return idNum === numericId;
       });
+      
       if (found) {
+        const updateQuery: any = { _id: found._id };
+        if (!isAdmin) {
+          updateQuery.posted_by_user_id = userId;
+        }
         news = await NewsUpdate.findOneAndUpdate(
-          { 
-            _id: found._id,
-            posted_by_user_id: userId 
-          },
+          updateQuery,
           { $set: req.body },
           { new: true }
         );
@@ -259,10 +277,42 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const news = await NewsUpdate.findOneAndDelete({ 
-      _id: req.params.id,
-      posted_by_user_id: req.user!.user_id 
-    });
+    const userId = req.user!.user_id;
+    const user = await User.findOne({ user_id: userId });
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    
+    const isAdminEmail = user.email === 'mavytechsolutions@gmail.com' || 
+                         user.patient_email === 'mavytechsolutions@gmail.com';
+    const isAdmin = user.is_admin === true || 
+                    user.role === 'admin' ||
+                    user.account_type === 'admin' ||
+                    isAdminEmail;
+    
+    const deleteQuery: any = {};
+    
+    if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      deleteQuery._id = req.params.id;
+    } else {
+      const allNews = await NewsUpdate.find(isAdmin ? {} : { posted_by_user_id: userId }).lean();
+      const found = allNews.find(n => {
+        const idNum = parseInt(n._id.toString().slice(-8), 16);
+        return idNum === parseInt(req.params.id, 10);
+      });
+      if (found) {
+        deleteQuery._id = found._id;
+      } else {
+        return res.status(404).json({ error: 'News not found' });
+      }
+    }
+    
+    if (!isAdmin) {
+      deleteQuery.posted_by_user_id = userId;
+    }
+    
+    const news = await NewsUpdate.findOneAndDelete(deleteQuery);
 
     if (!news) {
       return res.status(404).json({ error: 'News not found' });

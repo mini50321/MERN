@@ -422,6 +422,32 @@ router.get('/patients/:userId/bookings', authMiddleware, async (req: AuthRequest
   }
 });
 
+router.delete('/patients/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    console.log(`[Admin] DELETE /patients/${userId} - Attempting to delete patient`);
+    
+    const deletedOrders = await ServiceOrder.deleteMany({ patient_user_id: userId });
+    console.log(`[Admin] Deleted ${deletedOrders.deletedCount} service orders for patient ${userId}`);
+    
+    const user = await User.findOneAndDelete({ 
+      user_id: userId, 
+      account_type: 'patient' 
+    });
+    
+    if (!user) {
+      console.log(`[Admin] Patient ${userId} not found`);
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    
+    console.log(`[Admin] Successfully deleted patient ${userId}`);
+    return res.json({ success: true, message: 'Patient deleted successfully' });
+  } catch (error) {
+    console.error('Delete patient error:', error);
+    return res.status(500).json({ error: 'Failed to delete patient' });
+  }
+});
+
 router.get('/all-patient-orders', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     const orders = await ServiceOrder.find()
@@ -506,28 +532,6 @@ router.put('/patients/:userId/profile', authMiddleware, async (req: AuthRequest,
   } catch (error) {
     console.error('Update patient profile error:', error);
     return res.status(500).json({ error: 'Failed to update patient profile' });
-  }
-});
-
-router.delete('/patients/:userId', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const { userId } = req.params;
-    
-    await ServiceOrder.deleteMany({ patient_user_id: userId });
-    
-    const user = await User.findOneAndDelete({ 
-      user_id: userId, 
-      account_type: 'patient' 
-    });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'Patient not found' });
-    }
-    
-    return res.json({ success: true, message: 'Patient deleted successfully' });
-  } catch (error) {
-    console.error('Delete patient error:', error);
-    return res.status(500).json({ error: 'Failed to delete patient' });
   }
 });
 

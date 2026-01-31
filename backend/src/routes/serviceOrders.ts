@@ -16,39 +16,44 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     const profession = (user.profession || '').toLowerCase();
     
-    let pendingOrdersCondition: any = {
-      status: 'pending'
-    };
+    let serviceCategoryFilter: any = {};
     
     if (profession.includes('nursing') || profession.includes('nurse')) {
-      pendingOrdersCondition.service_category = { $regex: /nursing/i };
+      serviceCategoryFilter = { service_category: { $regex: /nursing/i } };
     } else if (profession.includes('physio') || profession.includes('therapy')) {
-      pendingOrdersCondition.service_category = { $regex: /physio/i };
+      serviceCategoryFilter = { service_category: { $regex: /physio/i } };
     } else if (profession.includes('ambulance') || profession.includes('emergency') || profession.includes('ems')) {
-      pendingOrdersCondition.service_category = { $regex: /ambulance/i };
+      serviceCategoryFilter = { service_category: { $regex: /ambulance/i } };
     } else {
-      pendingOrdersCondition.$or = [
-        { service_category: { $regex: /biomedical/i } },
-        { service_category: { $regex: /equipment/i } },
-        { service_category: { $regex: /repair/i } },
-        { service_category: { $regex: /maintenance/i } },
-        { service_category: { $regex: /rental/i } },
-        { service_category: { $exists: false } },
-        { service_category: null },
-        {
-          $and: [
-            { service_category: { $not: { $regex: /nursing/i } } },
-            { service_category: { $not: { $regex: /physio/i } } },
-            { service_category: { $not: { $regex: /ambulance/i } } }
-          ]
-        }
-      ];
+      serviceCategoryFilter = {
+        $or: [
+          { service_category: { $regex: /biomedical/i } },
+          { service_category: { $regex: /equipment/i } },
+          { service_category: { $regex: /repair/i } },
+          { service_category: { $regex: /maintenance/i } },
+          { service_category: { $regex: /rental/i } },
+          { service_category: { $exists: false } },
+          { service_category: null },
+          {
+            $and: [
+              { service_category: { $not: { $regex: /nursing/i } } },
+              { service_category: { $not: { $regex: /physio/i } } },
+              { service_category: { $not: { $regex: /ambulance/i } } }
+            ]
+          }
+        ]
+      };
     }
 
     const query: any = {
-      $or: [
-        pendingOrdersCondition,
-        { assigned_engineer_id: req.user!.user_id }
+      $and: [
+        {
+          $or: [
+            { status: 'pending' },
+            { assigned_engineer_id: req.user!.user_id }
+          ]
+        },
+        serviceCategoryFilter
       ]
     };
 

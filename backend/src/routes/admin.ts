@@ -192,10 +192,18 @@ router.get('/manuals', authMiddleware, async (_req: AuthRequest, res: Response) 
 router.get('/patients', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     const patients = await User.find({ account_type: 'patient' }).sort({ created_at: -1 });
-    return res.json(patients.map(patient => ({
-      id: patient._id.toString(),
-      ...patient.toObject()
-    })));
+    return res.json(patients.map(patient => {
+      const patientObj = patient.toObject();
+      return {
+        id: patient._id.toString(),
+        ...patientObj,
+        patient_full_name: patientObj.full_name,
+        patient_contact: patientObj.phone,
+        patient_city: patientObj.city,
+        patient_pincode: patientObj.pincode,
+        patient_address: patientObj.location
+      };
+    }));
   } catch (error) {
     console.error('Get admin patients error:', error);
     return res.status(500).json({ error: 'Failed to fetch patients' });
@@ -511,15 +519,38 @@ router.put('/patients/:userId/profile', authMiddleware, async (req: AuthRequest,
     const { userId } = req.params;
     const updateData = req.body;
     
+    console.log(`[Admin] PUT /patients/${userId}/profile - Updating patient with data:`, updateData);
+    
+    const mappedData: any = {};
+    if (updateData.patient_full_name !== undefined) mappedData.full_name = updateData.patient_full_name;
+    if (updateData.patient_contact !== undefined) mappedData.phone = updateData.patient_contact;
+    if (updateData.patient_email !== undefined) mappedData.patient_email = updateData.patient_email;
+    if (updateData.patient_address !== undefined) mappedData.location = updateData.patient_address;
+    if (updateData.patient_city !== undefined) mappedData.city = updateData.patient_city;
+    if (updateData.patient_pincode !== undefined) mappedData.pincode = updateData.patient_pincode;
+    
+    console.log(`[Admin] Mapped update data:`, mappedData);
+    
     const user = await User.findOneAndUpdate(
       { user_id: userId, account_type: 'patient' },
-      { $set: updateData },
-      { new: true }
+      { $set: mappedData },
+      { new: true, runValidators: true }
     );
     
     if (!user) {
+      console.log(`[Admin] Patient ${userId} not found`);
       return res.status(404).json({ error: 'Patient not found' });
     }
+    
+    await user.save();
+    
+    console.log(`[Admin] Successfully updated patient ${userId}:`, {
+      full_name: user.full_name,
+      patient_email: user.patient_email,
+      phone: user.phone,
+      city: user.city,
+      pincode: user.pincode
+    });
     
     return res.json({ 
       success: true, 
@@ -531,7 +562,10 @@ router.put('/patients/:userId/profile', authMiddleware, async (req: AuthRequest,
     });
   } catch (error) {
     console.error('Update patient profile error:', error);
-    return res.status(500).json({ error: 'Failed to update patient profile' });
+    return res.status(500).json({ 
+      error: 'Failed to update patient profile',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 

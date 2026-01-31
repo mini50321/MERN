@@ -133,15 +133,21 @@ export default function PatientManagementPanel({
       });
 
       if (res.ok) {
+        const data = await res.json();
+        console.log("Patient updated successfully:", data);
         alert("Patient profile updated successfully");
         setShowEditProfileModal(false);
+        setSelectedPatient(null);
+        await new Promise(resolve => setTimeout(resolve, 100));
         onReload();
       } else {
-        alert("Failed to update patient profile");
+        const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Failed to update patient:", errorData);
+        alert(`Failed to update patient profile: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error updating patient profile:", error);
-      alert("An error occurred");
+      alert(`An error occurred: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsSaving(false);
     }

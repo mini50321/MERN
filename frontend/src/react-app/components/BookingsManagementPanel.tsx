@@ -200,7 +200,8 @@ export default function BookingsManagementPanel({ canEdit }: BookingsManagementP
       });
 
       if (response.ok) {
-        loadBookings();
+        setViewingBooking(null);
+        await loadBookings();
         alert("Booking deleted successfully");
       } else {
         alert("Failed to delete booking");

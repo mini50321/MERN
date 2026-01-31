@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder } from '../models/index.js';
+import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -794,6 +794,134 @@ router.delete('/users/:userId', authMiddleware, async (req: AuthRequest, res: Re
       error: 'Failed to delete user',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
+  }
+});
+
+router.get('/support-tickets', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const tickets = await SupportTicket.find()
+      .sort({ 
+        status: 1,
+        created_at: -1 
+      })
+      .lean();
+    
+    const ticketsWithUserData = await Promise.all(tickets.map(async (ticket: any) => {
+      const ticketObj: any = {
+        id: ticket._id.toString(),
+        ...ticket
+      };
+      
+      if (ticket.user_id) {
+        const user = await User.findOne({ user_id: ticket.user_id }).lean();
+        if (user) {
+          ticketObj.user_name = user.full_name || (user as any).patient_full_name || user.business_name;
+          ticketObj.user_email = (user as any).patient_email || user.email || user.phone;
+        }
+      }
+      
+      if (ticket.booking_id) {
+        const booking = await ServiceOrder.findById(ticket.booking_id).lean();
+        if (booking) {
+          ticketObj.booking_service_category = booking.service_category;
+          ticketObj.booking_service_type = booking.service_type;
+          ticketObj.booking_status = booking.status;
+        }
+      }
+      
+      return ticketObj;
+    }));
+    
+    return res.json(ticketsWithUserData);
+  } catch (error) {
+    console.error('Get support tickets error:', error);
+    return res.status(500).json({ error: 'Failed to fetch support tickets' });
+  }
+});
+
+router.post('/support-tickets/:id/respond', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { response: adminResponse } = req.body;
+    
+    if (!adminResponse || !adminResponse.trim()) {
+      return res.status(400).json({ error: 'Response is required' });
+    }
+    
+    const ticket = await SupportTicket.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          admin_response: adminResponse,
+          status: 'in_progress',
+          updated_at: new Date()
+        }
+      },
+      { new: true }
+    );
+    
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Respond to ticket error:', error);
+    return res.status(500).json({ error: 'Failed to respond to ticket' });
+  }
+});
+
+router.post('/support-tickets/:id/resolve', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const ticket = await SupportTicket.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          status: 'resolved',
+          resolved_at: new Date(),
+          updated_at: new Date()
+        }
+      },
+      { new: true }
+    );
+    
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Resolve ticket error:', error);
+    return res.status(500).json({ error: 'Failed to resolve ticket' });
+  }
+});
+
+router.post('/support-tickets/:id/reopen', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const ticket = await SupportTicket.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          status: 'open',
+          resolved_at: null,
+          updated_at: new Date()
+        }
+      },
+      { new: true }
+    );
+    
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Reopen ticket error:', error);
+    return res.status(500).json({ error: 'Failed to reopen ticket' });
   }
 });
 

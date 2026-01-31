@@ -50,3 +50,5 @@ export { ContactRequest } from './ContactRequest.js';
 export type { IContactRequest } from './ContactRequest.js';
 export { ContactReply } from './ContactReply.js';
 export type { IContactReply } from './ContactReply.js';
+export { BannerAd } from './BannerAd.js';
+export type { IBannerAd } from './BannerAd.js';

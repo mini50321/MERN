@@ -616,6 +616,71 @@ router.get('/partner-orders/:userId', authMiddleware, async (req: AuthRequest, r
   }
 });
 
+router.put('/service-orders/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    console.log(`[Admin] PUT /service-orders/${id} - Updating service order with data:`, updateData);
+    
+    const order = await ServiceOrder.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          status: updateData.status,
+          service_type: updateData.service_type,
+          service_category: updateData.service_category,
+          equipment_name: updateData.equipment_name,
+          equipment_model: updateData.equipment_model,
+          issue_description: updateData.issue_description,
+          urgency_level: updateData.urgency_level,
+          quoted_price: updateData.quoted_price,
+          engineer_notes: updateData.engineer_notes,
+          updated_at: new Date()
+        }
+      },
+      { new: true, runValidators: true }
+    );
+    
+    if (!order) {
+      console.log(`[Admin] Service order ${id} not found`);
+      return res.status(404).json({ error: 'Service order not found' });
+    }
+    
+    console.log(`[Admin] Successfully updated service order ${id}`);
+    return res.json({ success: true, message: 'Service order updated successfully' });
+  } catch (error) {
+    console.error('Update service order error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to update service order',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+router.delete('/service-orders/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log(`[Admin] DELETE /service-orders/${id} - Attempting to delete service order`);
+    
+    const order = await ServiceOrder.findByIdAndDelete(id);
+    
+    if (!order) {
+      console.log(`[Admin] Service order ${id} not found`);
+      return res.status(404).json({ error: 'Service order not found' });
+    }
+    
+    console.log(`[Admin] Successfully deleted service order ${id}`);
+    return res.json({ success: true, message: 'Service order deleted successfully' });
+  } catch (error) {
+    console.error('Delete service order error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to delete service order',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 router.put('/users/:userId/subscription', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;

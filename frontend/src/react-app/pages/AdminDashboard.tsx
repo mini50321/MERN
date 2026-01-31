@@ -44,6 +44,7 @@ import EditExhibitionModal from "@/react-app/components/EditExhibitionModal";
 import EditJobModal from "@/react-app/components/EditJobModal";
 import EditFundraiserModal from "@/react-app/components/EditFundraiserModal";
 import EditCourseModal from "@/react-app/components/EditCourseModal";
+import EditServiceModal from "@/react-app/components/EditServiceModal";
 import AnalyticsOverview from "@/react-app/components/AnalyticsOverview";
 import AdvertisingPanel from "@/react-app/components/AdvertisingPanel";
 import PartnerManagementPanel from "@/react-app/components/PartnerManagementPanel";
@@ -903,7 +904,30 @@ function LearningManagementPanel({ courses, onReload, canEdit }: { courses: any[
   );
 }
 
-function ServicesManagementPanel({ services, canEdit }: { services: any[]; onReload: () => void; canEdit: boolean }) {
+function ServicesManagementPanel({ services, canEdit, onReload }: { services: any[]; onReload: () => void; canEdit: boolean }) {
+  const [editingService, setEditingService] = useState<any | null>(null);
+  const [serviceToDelete, setServiceToDelete] = useState<any | null>(null);
+
+  const handleDeleteService = async (serviceId: string | number) => {
+    try {
+      const res = await fetch(`/api/services/${serviceId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        alert("Service deleted successfully");
+        setServiceToDelete(null);
+        onReload();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete service");
+      }
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      alert("An error occurred while deleting the service");
+    }
+  };
+
   return (
     <div>
       <div className="overflow-x-auto">
@@ -927,16 +951,22 @@ function ServicesManagementPanel({ services, canEdit }: { services: any[]; onRel
                 <td className="py-3 px-4">{service.location || "N/A"}</td>
                 <td className="py-3 px-4">
                   <span className={`px-2 py-1 rounded-full text-xs ${service.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                    {service.status}
+                    {service.status || "active"}
                   </span>
                 </td>
                 <td className="py-3 px-4">
                   {canEdit ? (
                     <div className="flex gap-2">
-                      <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">
+                      <button 
+                        onClick={() => setEditingService(service)}
+                        className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+                      <button 
+                        onClick={() => setServiceToDelete(service)}
+                        className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -949,6 +979,27 @@ function ServicesManagementPanel({ services, canEdit }: { services: any[]; onRel
           </tbody>
         </table>
       </div>
+
+      {editingService && (
+        <EditServiceModal
+          service={editingService}
+          onClose={() => setEditingService(null)}
+          onSuccess={() => {
+            setEditingService(null);
+            onReload();
+          }}
+        />
+      )}
+
+      {serviceToDelete && (
+        <DeleteConfirmModal
+          isOpen={!!serviceToDelete}
+          onClose={() => setServiceToDelete(null)}
+          onConfirm={() => handleDeleteService(serviceToDelete.id)}
+          title="Delete Service"
+          message="Are you sure you want to delete this service?"
+        />
+      )}
     </div>
   );
 }

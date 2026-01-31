@@ -94,17 +94,54 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const service = await Service.findOneAndUpdate(
-      { 
-        _id: req.params.id,
-        posted_by_user_id: req.user!.user_id 
-      },
-      { $set: req.body },
-      { new: true }
-    );
+    const serviceId = req.params.id;
+    const userId = req.user!.user_id;
+    const user = await User.findOne({ user_id: userId });
+    const isAdmin = user?.is_admin === true || 
+                    user?.role === 'admin' || 
+                    user?.role === 'super_admin' ||
+                    user?.email === 'mavytechsolutions@gmail.com' ||
+                    user?.patient_email === 'mavytechsolutions@gmail.com';
+    
+    let service;
+    let actualServiceId: string | null = null;
+    
+    if (serviceId.match(/^[0-9a-fA-F]{24}$/)) {
+      actualServiceId = serviceId;
+    } else {
+      const allServices = await Service.find().lean();
+      const found = allServices.find(s => {
+        const idNum = parseInt(s._id.toString().slice(-8), 16);
+        return idNum === parseInt(serviceId, 10);
+      });
+      if (found) {
+        actualServiceId = found._id.toString();
+      }
+    }
+
+    if (!actualServiceId) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+
+    if (isAdmin) {
+      service = await Service.findByIdAndUpdate(
+        actualServiceId,
+        { $set: req.body },
+        { new: true, runValidators: true }
+      );
+    } else {
+      service = await Service.findOneAndUpdate(
+        { 
+          _id: actualServiceId,
+          posted_by_user_id: userId 
+        },
+        { $set: req.body },
+        { new: true, runValidators: true }
+      );
+    }
 
     if (!service) {
-      return res.status(404).json({ error: 'Service not found' });
+      return res.status(404).json({ error: 'Service not found or user not authorized' });
     }
 
     return res.json({ service, success: true });
@@ -116,15 +153,49 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const service = await Service.findOneAndDelete({ 
-      _id: req.params.id,
-      posted_by_user_id: req.user!.user_id 
-    });
+    const serviceId = req.params.id;
+    const userId = req.user!.user_id;
+    const user = await User.findOne({ user_id: userId });
+    const isAdmin = user?.is_admin === true || 
+                    user?.role === 'admin' || 
+                    user?.role === 'super_admin' ||
+                    user?.email === 'mavytechsolutions@gmail.com' ||
+                    user?.patient_email === 'mavytechsolutions@gmail.com';
+    
+    let service;
+    let actualServiceId: string | null = null;
+    
+    if (serviceId.match(/^[0-9a-fA-F]{24}$/)) {
+      actualServiceId = serviceId;
+    } else {
+      const allServices = await Service.find().lean();
+      const found = allServices.find(s => {
+        const idNum = parseInt(s._id.toString().slice(-8), 16);
+        return idNum === parseInt(serviceId, 10);
+      });
+      if (found) {
+        actualServiceId = found._id.toString();
+      }
+    }
 
-    if (!service) {
+    if (!actualServiceId) {
       return res.status(404).json({ error: 'Service not found' });
     }
 
+    if (isAdmin) {
+      service = await Service.findById(actualServiceId);
+    } else {
+      service = await Service.findOne({ 
+        _id: actualServiceId,
+        posted_by_user_id: userId 
+      });
+    }
+
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found or user not authorized' });
+    }
+
+    await Service.findByIdAndDelete(service._id);
     return res.json({ success: true });
   } catch (error) {
     console.error('Delete service error:', error);

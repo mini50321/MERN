@@ -358,7 +358,12 @@ router.get('/content/pending-exhibitions', authMiddleware, async (_req: AuthRequ
       .sort({ created_at: -1 })
       .lean();
     
-    return res.json(exhibitions);
+    const formattedExhibitions = exhibitions.map(exhibition => ({
+      ...exhibition,
+      id: exhibition._id.toString()
+    }));
+    
+    return res.json(formattedExhibitions);
   } catch (error) {
     console.error('Get pending exhibitions error:', error);
     return res.status(500).json({ error: 'Failed to fetch pending exhibitions' });
@@ -391,21 +396,97 @@ router.post('/content/fetch-exhibitions', authMiddleware, async (_req: AuthReque
   }
 });
 
-router.put('/content/:id/approve', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.put('/content/:id/approve', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    return res.json({ success: true, message: 'Content approved' });
+    const contentId = req.params.id;
+    let exhibition = null;
+    
+    if (contentId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(contentId);
+    } else {
+      const allExhibitions = await Exhibition.find({ is_user_post: true }).lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(contentId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findById(found._id);
+      }
+    }
+
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+
+    exhibition.is_user_post = false;
+    await exhibition.save();
+
+    return res.json({ success: true, message: 'Exhibition approved and published' });
   } catch (error) {
     console.error('Approve content error:', error);
     return res.status(500).json({ error: 'Failed to approve content' });
   }
 });
 
-router.put('/content/:id/reject', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.put('/content/:id/reject', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    return res.json({ success: true, message: 'Content rejected' });
+    const contentId = req.params.id;
+    let exhibition = null;
+    
+    if (contentId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(contentId);
+    } else {
+      const allExhibitions = await Exhibition.find({ is_user_post: true }).lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(contentId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findById(found._id);
+      }
+    }
+
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+
+    await Exhibition.findByIdAndDelete(exhibition._id);
+
+    return res.json({ success: true, message: 'Exhibition rejected and deleted' });
   } catch (error) {
     console.error('Reject content error:', error);
     return res.status(500).json({ error: 'Failed to reject content' });
+  }
+});
+
+router.delete('/content/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const contentId = req.params.id;
+    let exhibition = null;
+    
+    if (contentId.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(contentId);
+    } else {
+      const allExhibitions = await Exhibition.find({ is_user_post: true }).lean();
+      const found = allExhibitions.find(e => {
+        const idNum = parseInt(e._id.toString().slice(-8), 16);
+        return idNum === parseInt(contentId, 10);
+      });
+      if (found) {
+        exhibition = await Exhibition.findById(found._id);
+      }
+    }
+
+    if (!exhibition) {
+      return res.status(404).json({ error: 'Exhibition not found' });
+    }
+
+    await Exhibition.findByIdAndDelete(exhibition._id);
+
+    return res.json({ success: true, message: 'Exhibition deleted' });
+  } catch (error) {
+    console.error('Delete content error:', error);
+    return res.status(500).json({ error: 'Failed to delete content' });
   }
 });
 

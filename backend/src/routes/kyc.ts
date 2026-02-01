@@ -31,7 +31,14 @@ router.get('/status', authMiddleware, async (req: AuthRequest, res: Response) =>
       .sort({ submitted_at: -1 })
       .lean();
 
-    const status = user.is_verified ? 'approved' : (latestSubmission?.status || 'pending');
+    let status: string;
+    if (user.is_verified) {
+      status = 'approved';
+    } else if (latestSubmission) {
+      status = latestSubmission.status;
+    } else {
+      status = 'not_submitted';
+    }
 
     return res.json({
       status,
@@ -46,7 +53,9 @@ router.get('/status', authMiddleware, async (req: AuthRequest, res: Response) =>
         ? 'KYC verification completed' 
         : status === 'rejected'
         ? 'KYC verification rejected'
-        : 'KYC verification pending'
+        : status === 'pending'
+        ? 'KYC verification pending'
+        : 'KYC verification required'
     });
   } catch (error) {
     console.error('Get KYC status error:', error);

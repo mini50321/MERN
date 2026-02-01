@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import mongoose from 'mongoose';
-import { ServiceOrder, User } from '../models/index.js';
+import { ServiceOrder, User, KYCSubmission } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -147,11 +147,13 @@ router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res: Respons
     console.log('KYC Check - is_verified:', user.is_verified);
     console.log('KYC Check - User email:', user.email);
 
-    if (!user.is_verified) {
-      console.log('KYC Check - Blocking request: User not verified');
+    const hasKYCSubmission = await KYCSubmission.findOne({ user_id: req.user!.user_id });
+    
+    if (!user.is_verified || !hasKYCSubmission) {
+      console.log('KYC Check - Blocking request: User not verified or no KYC submission');
       return res.status(403).json({ 
         error: 'KYC verification required',
-        message: 'Please complete your KYC verification before accepting service orders. You can submit your KYC documents from your profile settings.',
+        message: 'Please complete your KYC verification before accepting service orders. You can submit your KYC documents from the Earn page.',
         requires_kyc: true
       });
     }
@@ -218,11 +220,13 @@ router.post('/:id/decline', authMiddleware, async (req: AuthRequest, res: Respon
     console.log('KYC Check (Decline) - User ID:', req.user!.user_id);
     console.log('KYC Check (Decline) - is_verified:', user.is_verified);
 
-    if (!user.is_verified) {
-      console.log('KYC Check (Decline) - Blocking request: User not verified');
+    const hasKYCSubmission = await KYCSubmission.findOne({ user_id: req.user!.user_id });
+    
+    if (!user.is_verified || !hasKYCSubmission) {
+      console.log('KYC Check (Decline) - Blocking request: User not verified or no KYC submission');
       return res.status(403).json({ 
         error: 'KYC verification required',
-        message: 'Please complete your KYC verification before declining service orders. You can submit your KYC documents from your profile settings.',
+        message: 'Please complete your KYC verification before declining service orders. You can submit your KYC documents from the Earn page.',
         requires_kyc: true
       });
     }

@@ -35,6 +35,9 @@ router.get('/check-admin', authMiddleware, async (req: AuthRequest, res: Respons
                     user.account_type === 'admin' ||
                     isAdminEmail;
 
+    const userRole = user.role || (isAdmin ? 'admin' : null);
+    const isSuperAdmin = userRole === 'super_admin' || isAdminEmail;
+
     const defaultPermissions: Record<string, string> = isAdmin ? {
       posts: 'edit',
       exhibitions: 'edit',
@@ -51,12 +54,15 @@ router.get('/check-admin', authMiddleware, async (req: AuthRequest, res: Respons
       reports: 'edit',
       advertising: 'edit',
       subscriptions: 'edit',
-      admins: 'view'
+      admins: 'view',
+      system_config: 'edit',
+      pricing: 'edit',
+      ribbon_settings: isSuperAdmin ? 'edit' : 'view'
     } : {};
 
     return res.json({ 
       is_admin: isAdmin,
-      role: user.role || (isAdmin ? 'admin' : null),
+      role: userRole,
       permissions: defaultPermissions
     });
   } catch (error) {

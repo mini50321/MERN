@@ -429,7 +429,10 @@ export default function AdminDashboard() {
                       } else if (item.id === "bookings" || item.id === "support") {
                         // Bookings and Support visible if admin has users OR patients permission
                         if (!permissions.users && !permissions.patients) return null;
-                      } else if (!permissions[item.id]) {
+                      } else if (item.id === "system_config" || item.id === "pricing" || item.id === "advertising" || item.id === "subscriptions" || item.id === "admins") {
+                        // System settings items - show for all admins (permissions are checked in backend)
+                        if (adminRole !== "super_admin" && !permissions[item.id]) return null;
+                      } else if (adminRole !== "super_admin" && !permissions[item.id]) {
                         return null;
                       }
 

@@ -105,7 +105,7 @@ export default function Earn() {
       const data = await response.json();
       setKycData(data);
       
-      if (!data.status || data.status === "rejected") {
+      if (!data.is_verified && (data.status === "not_submitted" || data.status === "rejected" || !data.status)) {
         setShowKYCModal(true);
       }
     } catch (error) {
@@ -489,7 +489,7 @@ export default function Earn() {
     );
   }
 
-  if (kycData?.status === "pending") {
+  if (kycData && !kycData.is_verified && kycData.status === "pending") {
     return (
       <DashboardLayout>
         <div className="max-w-6xl mx-auto mb-20 lg:mb-0 p-6">
@@ -502,6 +502,31 @@ export default function Earn() {
               Your KYC documents are under review by our team. You'll be able to accept service orders once your verification is approved.
             </p>
             <p className="text-sm text-gray-500">This typically takes 24-48 hours</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (kycData && !kycData.is_verified && (kycData.status === "not_submitted" || !kycData.status)) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-6xl mx-auto mb-20 lg:mb-0 p-6">
+          <div className="bg-white rounded-2xl p-12 shadow-lg text-center">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-10 h-10 text-blue-600" />
+            </div>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-2">KYC Verification Required</h3>
+            <p className="text-gray-600 mb-4">
+              You must complete KYC verification before you can accept or decline service orders. This is a one-time process to verify your identity and credentials.
+            </p>
+            <button
+              onClick={() => setShowKYCModal(true)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all flex items-center gap-2 mx-auto"
+            >
+              <Shield className="w-5 h-5" />
+              Complete KYC Verification
+            </button>
           </div>
         </div>
       </DashboardLayout>
@@ -522,7 +547,7 @@ export default function Earn() {
               <p className="text-gray-600 text-xs sm:text-base">Manage service orders from patients</p>
             </div>
             {/* KYC Verification Button */}
-            {kycData && (!kycData.is_verified || kycData.status === "rejected") && (
+            {kycData && !kycData.is_verified && (kycData.status === "not_submitted" || kycData.status === "rejected" || !kycData.status) && (
               <button
                 onClick={() => setShowKYCModal(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all flex items-center gap-2 text-sm sm:text-base"

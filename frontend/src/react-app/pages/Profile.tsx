@@ -37,6 +37,18 @@ interface PartnerRating {
   created_at: string;
 }
 
+const SectionCard = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => (
+  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-6">
+    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
+      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+      <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+    </div>
+    {children}
+  </div>
+);
+
 export default function Profile() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -53,6 +65,10 @@ export default function Profile() {
   const [originalPhone, setOriginalPhone] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
+  const fullNameInputRef = useRef<HTMLInputElement>(null);
+  const lastNameInputRef = useRef<HTMLInputElement>(null);
+  const [localFullName, setLocalFullName] = useState("");
+  const [localLastName, setLocalLastName] = useState("");
   const [isUploadingProfilePic, setIsUploadingProfilePic] = useState(false);
   const [ratings, setRatings] = useState<PartnerRating[]>([]);
   const [isLoadingRatings, setIsLoadingRatings] = useState(false);
@@ -107,9 +123,13 @@ export default function Profile() {
     }
     
     const phoneNumber = userProfile?.phone || "";
+    const fullName = userProfile?.full_name || (user as any)?.google_user_data?.name || "";
+    const lastName = userProfile?.last_name || "";
+    setLocalFullName(fullName);
+    setLocalLastName(lastName);
     setProfile({
-      full_name: userProfile?.full_name || (user as any)?.google_user_data?.name || "",
-      last_name: userProfile?.last_name || "",
+      full_name: fullName,
+      last_name: lastName,
       specialisation: userProfile?.specialisation || "",
       bio: userProfile?.bio || "",
       phone: phoneNumber,
@@ -260,9 +280,13 @@ export default function Profile() {
   const handleCancel = () => {
     if (user) {
       const userProfile = (user as any).profile;
+      const fullName = userProfile?.full_name || user.google_user_data.name || "";
+      const lastName = userProfile?.last_name || "";
+      setLocalFullName(fullName);
+      setLocalLastName(lastName);
       setProfile({
-        full_name: userProfile?.full_name || user.google_user_data.name || "",
-        last_name: userProfile?.last_name || "",
+        full_name: fullName,
+        last_name: lastName,
         specialisation: userProfile?.specialisation || "",
         bio: userProfile?.bio || "",
         phone: userProfile?.phone || "",
@@ -530,18 +554,6 @@ export default function Profile() {
     </div>
   );
 
-  const SectionCard = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-6">
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-          <Icon className="w-5 h-5 text-white" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-      </div>
-      {children}
-    </div>
-  );
-
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto mb-20 lg:mb-0">
@@ -668,42 +680,40 @@ export default function Profile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                {isEditing ? (
-                  <input
-                    key="full_name_input"
-                    type="text"
-                    value={profile.full_name || ""}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setProfile(prev => ({ ...prev, full_name: e.target.value }));
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-gray-900 px-4 py-3 bg-gray-50 rounded-lg">
-                    {profile.full_name || "Not set"}
-                  </p>
-                )}
+                <input
+                  ref={fullNameInputRef}
+                  type="text"
+                  value={isEditing ? localFullName : (profile.full_name || "")}
+                  onChange={(e) => {
+                    if (!isEditing) return;
+                    const value = e.target.value;
+                    setLocalFullName(value);
+                    setProfile(prev => ({ ...prev, full_name: value }));
+                  }}
+                  readOnly={!isEditing}
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !isEditing ? "bg-gray-50 cursor-default" : ""
+                  }`}
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                {isEditing ? (
-                  <input
-                    key="last_name_input"
-                    type="text"
-                    value={profile.last_name || ""}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setProfile(prev => ({ ...prev, last_name: e.target.value }));
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-gray-900 px-4 py-3 bg-gray-50 rounded-lg">
-                    {profile.last_name || "Not set"}
-                  </p>
-                )}
+                <input
+                  ref={lastNameInputRef}
+                  type="text"
+                  value={isEditing ? localLastName : (profile.last_name || "")}
+                  onChange={(e) => {
+                    if (!isEditing) return;
+                    const value = e.target.value;
+                    setLocalLastName(value);
+                    setProfile(prev => ({ ...prev, last_name: value }));
+                  }}
+                  readOnly={!isEditing}
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    !isEditing ? "bg-gray-50 cursor-default" : ""
+                  }`}
+                />
               </div>
             </div>
 

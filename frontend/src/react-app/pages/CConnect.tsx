@@ -12,7 +12,8 @@ import {
   X,
   MoreHorizontal,
   Ban,
-  MessageCircle
+  MessageCircle,
+  Send
 } from "lucide-react";
 import { shuffleArray } from "@/shared/utils";
 import { useNavigate } from "react-router";
@@ -214,6 +215,24 @@ export default function CConnect() {
     }
   };
 
+  const handleSendConnectionRequest = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/connect/request/${userId}`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "Failed to send connection request");
+        return;
+      }
+      await fetchData();
+      await fetchStats();
+    } catch (error) {
+      console.error("Error sending connection request:", error);
+      alert("Failed to send connection request");
+    }
+  };
+
   const UserCard = ({ profile, showActions = true }: { profile: UserProfile; showActions?: boolean }) => (
     <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 relative">
       <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
@@ -305,14 +324,31 @@ export default function CConnect() {
               <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               <span>Following</span>
             </button>
-          ) : (
+          ) : profile.request_sent ? (
             <button
-              onClick={() => handleFollow(profile.user_id)}
-              className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-md transition-all font-medium text-xs sm:text-sm"
+              disabled
+              className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border-2 border-gray-300 text-gray-500 rounded-lg font-medium text-xs sm:text-sm cursor-not-allowed"
             >
-              <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-              <span>Follow</span>
+              <Send className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span>Request Sent</span>
             </button>
+          ) : (
+            <>
+              <button
+                onClick={() => handleFollow(profile.user_id)}
+                className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:shadow-md transition-all font-medium text-xs sm:text-sm"
+              >
+                <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span>Follow</span>
+              </button>
+              <button
+                onClick={() => handleSendConnectionRequest(profile.user_id)}
+                className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-md transition-all font-medium text-xs sm:text-sm"
+              >
+                <Send className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span>Connect</span>
+              </button>
+            </>
           )}
         </div>
       )}
@@ -575,7 +611,7 @@ export default function CConnect() {
             ) : (
               <div className="space-y-4">
                 {blocked.map((user) => (
-                  <div key={user.blocked_user_id} className="bg-white rounded-2xl p-6 shadow-lg">
+                  <div key={user.user_id || user.blocked_user_id} className="bg-white rounded-2xl p-6 shadow-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         {user.profile_picture_url ? (
@@ -596,10 +632,13 @@ export default function CConnect() {
                           {user.specialisation && (
                             <p className="text-sm text-gray-600">{user.specialisation}</p>
                           )}
+                          {user.location && (
+                            <p className="text-xs text-gray-500 mt-1">{user.location}</p>
+                          )}
                         </div>
                       </div>
                       <button
-                        onClick={() => handleUnblock(user.blocked_user_id)}
+                        onClick={() => handleUnblock(user.user_id || user.blocked_user_id)}
                         className="px-6 py-2 border-2 border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-all font-medium"
                       >
                         Unblock

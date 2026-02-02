@@ -60,3 +60,7 @@ export { KYCSubmission } from './KYCSubmission.js';
 export type { IKYCSubmission } from './KYCSubmission.js';
 export { Follow } from './Follow.js';
 export type { IFollow } from './Follow.js';
+export { BlockedUser } from './BlockedUser.js';
+export type { IBlockedUser } from './BlockedUser.js';
+export { ConnectionRequest } from './ConnectionRequest.js';
+export type { IConnectionRequest } from './ConnectionRequest.js';

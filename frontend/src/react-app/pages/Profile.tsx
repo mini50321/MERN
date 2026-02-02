@@ -41,21 +41,6 @@ export default function Profile() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      input:focus, textarea:focus {
-        scroll-margin: 0 !important;
-      }
-      html {
-        scroll-behavior: auto !important;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
@@ -98,33 +83,11 @@ export default function Profile() {
   const [educationEntries, setEducationEntries] = useState<EducationEntry[]>([]);
   const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>([]);
 
-  useEffect(() => {
-    const preventScrollOnFocus = (e: FocusEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        const scrollY = window.scrollY;
-        const scrollX = window.scrollX;
-        
-        setTimeout(() => {
-          window.scrollTo({
-            top: scrollY,
-            left: scrollX,
-            behavior: 'instant'
-          });
-        }, 0);
-      }
-    };
-
-    window.addEventListener('focusin', preventScrollOnFocus, true);
-    
-    return () => {
-      window.removeEventListener('focusin', preventScrollOnFocus, true);
-    };
-  }, []);
 
   const [profileInitialized, setProfileInitialized] = useState(false);
 
   useEffect(() => {
-    if (!user || profileInitialized) {
+    if (!user || profileInitialized || isEditing) {
       return;
     }
     
@@ -185,7 +148,7 @@ export default function Profile() {
     }
     
     setProfileInitialized(true);
-  }, [user, profileInitialized]);
+  }, [user, profileInitialized, isEditing]);
 
   const loadRatings = async () => {
     setIsLoadingRatings(true);

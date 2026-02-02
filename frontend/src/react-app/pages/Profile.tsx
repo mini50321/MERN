@@ -193,46 +193,45 @@ export default function Profile() {
         loadTransactions();
       }
     }
-      
-      const phoneNumber = userProfile?.phone || "";
-      setProfile({
-        full_name: userProfile?.full_name || (user as any)?.google_user_data?.name || "",
-        last_name: userProfile?.last_name || "",
-        specialisation: userProfile?.specialisation || "",
-        bio: userProfile?.bio || "",
-        phone: phoneNumber,
-        country_code: userProfile?.country_code || "+1",
-        location: userProfile?.location || "",
-        skills: userProfile?.skills || "",
-        instagram_url: userProfile?.instagram_url || "",
-        facebook_url: userProfile?.facebook_url || "",
-        linkedin_url: userProfile?.linkedin_url || "",
-        instagram_visibility: userProfile?.instagram_visibility || "everyone",
-        facebook_visibility: userProfile?.facebook_visibility || "everyone",
-        linkedin_visibility: userProfile?.linkedin_visibility || "everyone",
-        is_open_to_work: userProfile?.is_open_to_work === 1,
-        state: userProfile?.state || "",
-        country: userProfile?.country || "",
-      });
-      setOriginalPhone(phoneNumber);
-      setHasResume(!!userProfile?.resume_url);
+    
+    const phoneNumber = userProfile?.phone || "";
+    setProfile({
+      full_name: userProfile?.full_name || (user as any)?.google_user_data?.name || "",
+      last_name: userProfile?.last_name || "",
+      specialisation: userProfile?.specialisation || "",
+      bio: userProfile?.bio || "",
+      phone: phoneNumber,
+      country_code: userProfile?.country_code || "+1",
+      location: userProfile?.location || "",
+      skills: userProfile?.skills || "",
+      instagram_url: userProfile?.instagram_url || "",
+      facebook_url: userProfile?.facebook_url || "",
+      linkedin_url: userProfile?.linkedin_url || "",
+      instagram_visibility: userProfile?.instagram_visibility || "everyone",
+      facebook_visibility: userProfile?.facebook_visibility || "everyone",
+      linkedin_visibility: userProfile?.linkedin_visibility || "everyone",
+      is_open_to_work: userProfile?.is_open_to_work === 1,
+      state: userProfile?.state || "",
+      country: userProfile?.country || "",
+    });
+    setOriginalPhone(phoneNumber);
+    setHasResume(!!userProfile?.resume_url);
 
-      if (userProfile?.education_json) {
-        try {
-          const parsed = JSON.parse(userProfile.education_json);
-          setEducationEntries(Array.isArray(parsed) ? parsed : []);
-        } catch (e) {
-          setEducationEntries([]);
-        }
+    if (userProfile?.education_json) {
+      try {
+        const parsed = JSON.parse(userProfile.education_json);
+        setEducationEntries(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+        setEducationEntries([]);
       }
+    }
 
-      if (userProfile?.experience_json) {
-        try {
-          const parsed = JSON.parse(userProfile.experience_json);
-          setExperienceEntries(Array.isArray(parsed) ? parsed : []);
-        } catch (e) {
-          setExperienceEntries([]);
-        }
+    if (userProfile?.experience_json) {
+      try {
+        const parsed = JSON.parse(userProfile.experience_json);
+        setExperienceEntries(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+        setExperienceEntries([]);
       }
     }
   }, [user]);

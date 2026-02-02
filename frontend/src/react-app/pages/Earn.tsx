@@ -102,6 +102,9 @@ export default function Earn() {
     setIsCheckingKYC(true);
     try {
       const response = await fetch("/api/kyc/status");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       setKycData(data);
       
@@ -110,6 +113,7 @@ export default function Earn() {
       }
     } catch (error) {
       console.error("Error checking KYC status:", error);
+      setKycData({ is_verified: false, status: "not_submitted" });
     } finally {
       setIsCheckingKYC(false);
     }
@@ -508,7 +512,7 @@ export default function Earn() {
     );
   }
 
-  if (kycData && !kycData.is_verified && (kycData.status === "not_submitted" || !kycData.status)) {
+  if ((!kycData || (kycData && !kycData.is_verified && (kycData.status === "not_submitted" || !kycData.status)))) {
     return (
       <DashboardLayout>
         <div className="max-w-6xl mx-auto mb-20 lg:mb-0 p-6">
@@ -532,7 +536,7 @@ export default function Earn() {
         {showKYCModal && (
           <KYCVerificationModal
             onClose={() => setShowKYCModal(false)}
-            kycStatus={kycData}
+            kycStatus={kycData || { is_verified: false, status: "not_submitted" }}
             onSubmitSuccess={() => {
               setShowKYCModal(false);
               checkKYCStatus();

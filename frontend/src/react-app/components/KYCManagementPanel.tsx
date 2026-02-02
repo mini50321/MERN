@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle, XCircle, Eye, X, FileText, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, Eye, X, FileText, AlertCircle, Download } from "lucide-react";
 
 interface KYCSubmission {
   id: number;
@@ -30,6 +30,7 @@ export default function KYCManagementPanel({
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [viewingDocument, setViewingDocument] = useState<{ url: string; title: string } | null>(null);
 
   const handleApprove = async (id: number) => {
     if (!canEdit || !confirm("Are you sure you want to approve this KYC submission?")) return;
@@ -257,43 +258,37 @@ export default function KYCManagementPanel({
                   {/* ID Proof */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-2">ID Proof with Photo</h4>
-                    <a
-                      href={selectedSubmission.id_proof_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => setViewingDocument({ url: selectedSubmission.id_proof_url, title: "ID Proof with Photo" })}
                       className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
                       View Document
-                    </a>
+                    </button>
                   </div>
 
                   {/* PAN Card */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-2">PAN Card</h4>
-                    <a
-                      href={selectedSubmission.pan_card_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => setViewingDocument({ url: selectedSubmission.pan_card_url, title: "PAN Card" })}
                       className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
                       View Document
-                    </a>
+                    </button>
                   </div>
 
                   {/* Experience Certificate */}
                   <div className="border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-2">Experience Certificate / ID Card</h4>
-                    <a
-                      href={selectedSubmission.experience_certificate_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => setViewingDocument({ url: selectedSubmission.experience_certificate_url, title: "Experience Certificate / ID Card" })}
                       className="text-blue-600 hover:text-blue-800 underline text-sm flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
                       View Document
-                    </a>
+                    </button>
                   </div>
                 </div>
 
@@ -346,6 +341,70 @@ export default function KYCManagementPanel({
                 >
                   Close
                 </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Viewer Modal */}
+      {viewingDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] flex flex-col shadow-2xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">{viewingDocument.title}</h3>
+              <div className="flex items-center gap-2">
+                <a
+                  href={viewingDocument.url}
+                  download={`${viewingDocument.title.replace(/\s+/g, '_')}.${viewingDocument.url.includes('pdf') ? 'pdf' : 'png'}`}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Download"
+                >
+                  <Download className="w-5 h-5 text-gray-600" />
+                </a>
+                <button
+                  onClick={() => setViewingDocument(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-gray-100 flex items-center justify-center">
+              {viewingDocument.url.startsWith('data:image/') ? (
+                <img
+                  src={viewingDocument.url}
+                  alt={viewingDocument.title}
+                  className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+                  onError={(e) => {
+                    console.error('Error loading image:', e);
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-red-600 p-4';
+                    errorDiv.textContent = 'Failed to load image. Please try downloading the document.';
+                    target.parentElement?.appendChild(errorDiv);
+                  }}
+                />
+              ) : viewingDocument.url.includes('pdf') || viewingDocument.url.startsWith('data:application/pdf') ? (
+                <iframe
+                  src={viewingDocument.url}
+                  className="w-full h-[80vh] border-0 rounded-lg shadow-lg"
+                  title={viewingDocument.title}
+                />
+              ) : (
+                <div className="text-center p-8">
+                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">Preview not available for this file type.</p>
+                  <a
+                    href={viewingDocument.url}
+                    download
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Document
+                  </a>
+                </div>
               )}
             </div>
           </div>

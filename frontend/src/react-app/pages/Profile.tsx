@@ -105,72 +105,22 @@ export default function Profile() {
         const scrollY = window.scrollY;
         const scrollX = window.scrollX;
         
+        const originalScrollIntoView = target.scrollIntoView;
         target.scrollIntoView = function() {
           return;
         };
         
         requestAnimationFrame(() => {
           window.scrollTo(scrollX, scrollY);
+          target.scrollIntoView = originalScrollIntoView;
         });
       }
     };
 
-    const preventScrollOnInput = (e: Event) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        const scrollY = window.scrollY;
-        requestAnimationFrame(() => {
-          window.scrollTo(0, scrollY);
-        });
-      }
-    };
-
-    let scrollLockInterval: NodeJS.Timeout | null = null;
-    let savedScrollY = window.scrollY;
-    
-    const lockScroll = () => {
-      if (document.activeElement instanceof HTMLInputElement || 
-          document.activeElement instanceof HTMLTextAreaElement) {
-        savedScrollY = window.scrollY;
-        
-        if (scrollLockInterval) {
-          clearInterval(scrollLockInterval);
-        }
-        
-        scrollLockInterval = setInterval(() => {
-          if (document.activeElement instanceof HTMLInputElement || 
-              document.activeElement instanceof HTMLTextAreaElement) {
-            window.scrollTo({ top: savedScrollY, behavior: 'instant' });
-          } else {
-            if (scrollLockInterval) {
-              clearInterval(scrollLockInterval);
-              scrollLockInterval = null;
-            }
-          }
-        }, 10);
-      }
-    };
-
-    window.addEventListener('focusin', (e) => {
-      preventScrollOnFocus(e);
-      lockScroll();
-    }, true);
-    document.addEventListener('input', (e) => {
-      preventScrollOnInput(e);
-      lockScroll();
-    }, true);
-    window.addEventListener('focusout', () => {
-      if (scrollLockInterval) {
-        clearInterval(scrollLockInterval);
-        scrollLockInterval = null;
-      }
-    });
+    window.addEventListener('focusin', preventScrollOnFocus, true);
     
     return () => {
       window.removeEventListener('focusin', preventScrollOnFocus, true);
-      document.removeEventListener('input', preventScrollOnInput, true);
-      if (scrollLockInterval) {
-        clearInterval(scrollLockInterval);
-      }
     };
   }, []);
 
@@ -757,7 +707,7 @@ export default function Profile() {
                 {isEditing ? (
                   <input
                     type="text"
-                    value={profile.full_name}
+                    value={profile.full_name || ""}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -773,19 +723,9 @@ export default function Profile() {
                 {isEditing ? (
                   <input
                     type="text"
-                    value={profile.last_name}
-                    onChange={(e) => {
-                      setProfile({ ...profile, last_name: e.target.value });
-                      const scrollY = window.scrollY;
-                      requestAnimationFrame(() => window.scrollTo(0, scrollY));
-                    }}
-                    onFocus={(e) => {
-                      const scrollY = window.scrollY;
-                      e.target.scrollIntoView = () => {};
-                      requestAnimationFrame(() => window.scrollTo(0, scrollY));
-                    }}
+                    value={profile.last_name || ""}
+                    onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    style={{ scrollMargin: 0 }}
                   />
                 ) : (
                   <p className="text-gray-900 px-4 py-3 bg-gray-50 rounded-lg">

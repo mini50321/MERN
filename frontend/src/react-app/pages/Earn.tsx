@@ -106,6 +106,7 @@ export default function Earn() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      console.log("KYC Status Response:", data);
       setKycData(data);
       
       if (!data.is_verified && (data.status === "not_submitted" || data.status === "rejected" || !data.status)) {
@@ -512,7 +513,11 @@ export default function Earn() {
     );
   }
 
-  if ((!kycData || (kycData && !kycData.is_verified && (kycData.status === "not_submitted" || !kycData.status)))) {
+  const isUserVerified = kycData?.is_verified === true;
+  const kycStatus = kycData?.status;
+  const shouldShowKYCRequired = !isUserVerified || kycStatus === "not_submitted" || kycStatus === "rejected" || !kycStatus;
+
+  if (shouldShowKYCRequired) {
     return (
       <DashboardLayout>
         <div className="max-w-6xl mx-auto mb-20 lg:mb-0 p-6">

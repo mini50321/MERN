@@ -58,3 +58,5 @@ export { AppSetting } from './AppSetting.js';
 export type { IAppSetting } from './AppSetting.js';
 export { KYCSubmission } from './KYCSubmission.js';
 export type { IKYCSubmission } from './KYCSubmission.js';
+export { Follow } from './Follow.js';
+export type { IFollow } from './Follow.js';

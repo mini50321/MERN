@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Response, NextFunction } from 'express';
 import multer from 'multer';
 import { User, KYCSubmission } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
@@ -18,6 +18,19 @@ const upload = multer({
     }
   }
 });
+
+const handleMulterError = (err: any, _req: express.Request, res: Response, next: express.NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File is too large. Maximum size is 10MB.' });
+    }
+    return res.status(400).json({ error: err.message });
+  }
+  if (err) {
+    return res.status(400).json({ error: err.message || 'File upload error' });
+  }
+  return next();
+};
 
 router.get('/status', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -63,13 +76,25 @@ router.get('/status', authMiddleware, async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.post('/upload-document', authMiddleware, upload.single('document'), async (req: AuthRequest, res: Response) => {
+router.post('/upload-document', authMiddleware, (req: AuthRequest, res: Response, next: express.NextFunction) => {
+  upload.single('document')(req, res, (err: any) => {
+    if (err) {
+      return handleMulterError(err, req, res, next);
+    }
+    next();
+  });
+}, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file provided' });
     }
 
     const file = req.file;
+    
+    if (file.size > 10 * 1024 * 1024) {
+      return res.status(413).json({ error: 'File is too large. Maximum size is 10MB.' });
+    }
+
     const fileUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
     return res.json({
@@ -77,8 +102,14 @@ router.post('/upload-document', authMiddleware, upload.single('document'), async
       file_url: fileUrl,
       message: 'Document uploaded successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload KYC document error:', error);
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'File is too large. Maximum size is 10MB.' });
+      }
+      return res.status(400).json({ error: error.message });
+    }
     return res.status(500).json({ error: 'Failed to upload document' });
   }
 });

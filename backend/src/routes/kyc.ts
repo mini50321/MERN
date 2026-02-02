@@ -118,8 +118,33 @@ router.post('/submit', authMiddleware, async (req: AuthRequest, res: Response) =
   try {
     const { full_name, id_proof_url, pan_card_url, experience_certificate_url } = req.body;
 
-    if (!full_name || !id_proof_url || !pan_card_url || !experience_certificate_url) {
-      return res.status(400).json({ error: 'All fields are required' });
+    console.log('KYC Submit Request:', {
+      user_id: req.user!.user_id,
+      full_name: full_name ? 'provided' : 'missing',
+      id_proof_url: id_proof_url ? 'provided' : 'missing',
+      pan_card_url: pan_card_url ? 'provided' : 'missing',
+      experience_certificate_url: experience_certificate_url ? 'provided' : 'missing'
+    });
+
+    if (!full_name || !full_name.trim()) {
+      return res.status(400).json({ error: 'Full name is required' });
+    }
+
+    if (!id_proof_url || !id_proof_url.trim()) {
+      return res.status(400).json({ error: 'ID proof document is required' });
+    }
+
+    if (!pan_card_url || !pan_card_url.trim()) {
+      return res.status(400).json({ error: 'PAN card document is required' });
+    }
+
+    if (!experience_certificate_url || !experience_certificate_url.trim()) {
+      return res.status(400).json({ error: 'Experience certificate document is required' });
+    }
+
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
 
     const existingSubmission = await KYCSubmission.findOne({
@@ -128,10 +153,12 @@ router.post('/submit', authMiddleware, async (req: AuthRequest, res: Response) =
     });
 
     if (existingSubmission) {
-      if (existingSubmission.status === 'approved') {
+      if (existingSubmission.status === 'approved' && user.is_verified) {
         return res.status(400).json({ error: 'KYC already approved' });
       }
-      return res.status(400).json({ error: 'You already have a pending KYC submission' });
+      if (existingSubmission.status === 'pending') {
+        return res.status(400).json({ error: 'You already have a pending KYC submission' });
+      }
     }
 
     const submission = await KYCSubmission.create({

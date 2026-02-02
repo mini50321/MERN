@@ -74,6 +74,9 @@ export default function KYCVerificationModal({
       }
 
       const idProofData = await idProofRes.json();
+      if (!idProofData.file_url) {
+        throw new Error("ID proof upload failed - no file URL returned");
+      }
 
       // Upload PAN card
       setUploadProgress("Uploading PAN card...");
@@ -87,10 +90,14 @@ export default function KYCVerificationModal({
       });
 
       if (!panCardRes.ok) {
-        throw new Error("Failed to upload PAN card");
+        const errorData = await panCardRes.json().catch(() => ({ error: "Failed to upload PAN card" }));
+        throw new Error(errorData.error || "Failed to upload PAN card");
       }
 
       const panCardData = await panCardRes.json();
+      if (!panCardData.file_url) {
+        throw new Error("PAN card upload failed - no file URL returned");
+      }
 
       // Upload experience certificate
       setUploadProgress("Uploading experience certificate...");
@@ -104,10 +111,14 @@ export default function KYCVerificationModal({
       });
 
       if (!experienceRes.ok) {
-        throw new Error("Failed to upload experience certificate");
+        const errorData = await experienceRes.json().catch(() => ({ error: "Failed to upload experience certificate" }));
+        throw new Error(errorData.error || "Failed to upload experience certificate");
       }
 
       const experienceData = await experienceRes.json();
+      if (!experienceData.file_url) {
+        throw new Error("Experience certificate upload failed - no file URL returned");
+      }
 
       // Submit KYC
       setUploadProgress("Submitting KYC verification...");
@@ -123,7 +134,8 @@ export default function KYCVerificationModal({
       });
 
       if (!submitRes.ok) {
-        throw new Error("Failed to submit KYC");
+        const errorData = await submitRes.json().catch(() => ({ error: "Failed to submit KYC" }));
+        throw new Error(errorData.error || "Failed to submit KYC");
       }
 
       alert("KYC documents submitted successfully! Please wait for admin approval.");

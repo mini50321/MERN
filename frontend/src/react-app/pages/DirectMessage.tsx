@@ -197,6 +197,15 @@ export default function DirectMessage() {
                     </div>
                   )}
                   
+                  <div className={`flex-1 max-w-md ${isOwnMessage ? "text-right" : ""}`}>
+                    <div className={`inline-block ${isOwnMessage ? "bg-blue-600 text-white" : "bg-white text-gray-900"} rounded-2xl px-4 py-3 shadow`}>
+                      <p className="break-words">{msg.message}</p>
+                    </div>
+                    <div className={`text-xs text-gray-500 mt-1 ${isOwnMessage ? "text-right" : ""}`}>
+                      {formatTime(msg.created_at)}
+                    </div>
+                  </div>
+                  
                   {isOwnMessage && (
                     <div className="flex-shrink-0">
                       {user.profile_picture_url ? (
@@ -212,15 +221,6 @@ export default function DirectMessage() {
                       )}
                     </div>
                   )}
-                  
-                  <div className={`flex-1 max-w-md ${isOwnMessage ? "text-right" : ""}`}>
-                    <div className={`inline-block ${isOwnMessage ? "bg-blue-600 text-white" : "bg-white text-gray-900"} rounded-2xl px-4 py-3 shadow`}>
-                      <p className="break-words">{msg.message}</p>
-                    </div>
-                    <div className={`text-xs text-gray-500 mt-1 ${isOwnMessage ? "text-right" : ""}`}>
-                      {formatTime(msg.created_at)}
-                    </div>
-                  </div>
                 </div>
               );
             })

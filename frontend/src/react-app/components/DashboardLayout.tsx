@@ -73,7 +73,7 @@ function NavLinks({
           <Link
             key={item.path}
             to={item.path}
-            onClick={(e) => {
+            onClick={() => {
               if (onClick) onClick();
             }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${

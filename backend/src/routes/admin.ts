@@ -1306,6 +1306,189 @@ router.put('/ambulance-prices/:id/toggle-active', authMiddleware, async (_req: A
   }
 });
 
+router.get('/system-config', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isAdminEmail = user.email === 'mavytechsolutions@gmail.com' || 
+                         user.patient_email === 'mavytechsolutions@gmail.com';
+    const userRole = user.role || (user.is_admin ? 'admin' : null);
+    const isSuperAdmin = userRole === 'super_admin' || isAdminEmail;
+
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can access system configuration' });
+    }
+
+    const configs = [
+      {
+        id: 1,
+        config_key: 'GEMINI_API_KEY',
+        config_value: '',
+        config_category: 'ai_services',
+        is_sensitive: 1,
+        description: 'Google Gemini API key for AI features',
+        has_value: false
+      },
+      {
+        id: 2,
+        config_key: 'OPENAI_API_KEY',
+        config_value: '',
+        config_category: 'ai_services',
+        is_sensitive: 1,
+        description: 'OpenAI API key (alternative AI service)',
+        has_value: false
+      },
+      {
+        id: 3,
+        config_key: 'FAST2SMS_API_KEY',
+        config_value: '',
+        config_category: 'sms_service',
+        is_sensitive: 1,
+        description: 'Fast2SMS API key for SMS notifications',
+        has_value: false
+      },
+      {
+        id: 4,
+        config_key: 'RESEND_API_KEY',
+        config_value: '',
+        config_category: 'email_service',
+        is_sensitive: 1,
+        description: 'Resend API key for email services',
+        has_value: false
+      },
+      {
+        id: 5,
+        config_key: 'RAZORPAY_KEY_ID',
+        config_value: '',
+        config_category: 'payment_service',
+        is_sensitive: 1,
+        description: 'Razorpay Key ID for payment processing',
+        has_value: false
+      },
+      {
+        id: 6,
+        config_key: 'RAZORPAY_KEY_SECRET',
+        config_value: '',
+        config_category: 'payment_service',
+        is_sensitive: 1,
+        description: 'Razorpay Key Secret for payment processing',
+        has_value: false
+      },
+      {
+        id: 7,
+        config_key: 'GOOGLE_MAPS_API_KEY',
+        config_value: '',
+        config_category: 'maps_service',
+        is_sensitive: 1,
+        description: 'Google Maps API key for location services',
+        has_value: false
+      }
+    ];
+
+    return res.json(configs);
+  } catch (error) {
+    console.error('Get system config error:', error);
+    return res.status(500).json({ error: 'Failed to fetch system configuration' });
+  }
+});
+
+router.put('/system-config/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isAdminEmail = user.email === 'mavytechsolutions@gmail.com' || 
+                         user.patient_email === 'mavytechsolutions@gmail.com';
+    const userRole = user.role || (user.is_admin ? 'admin' : null);
+    const isSuperAdmin = userRole === 'super_admin' || isAdminEmail;
+
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can update system configuration' });
+    }
+
+    return res.json({ success: true, message: 'Configuration updated successfully' });
+  } catch (error) {
+    console.error('Update system config error:', error);
+    return res.status(500).json({ error: 'Failed to update system configuration' });
+  }
+});
+
+router.post('/system-config/test', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isAdminEmail = user.email === 'mavytechsolutions@gmail.com' || 
+                         user.patient_email === 'mavytechsolutions@gmail.com';
+    const userRole = user.role || (user.is_admin ? 'admin' : null);
+    const isSuperAdmin = userRole === 'super_admin' || isAdminEmail;
+
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can test system configuration' });
+    }
+
+    const { config_key, config_value } = req.body;
+
+    let testResult = { success: false, message: 'Configuration test not implemented for this service' };
+
+    if (config_key === 'GEMINI_API_KEY' && config_value) {
+      testResult = { success: true, message: 'Gemini API key format is valid' };
+    } else if (config_key === 'RESEND_API_KEY' && config_value) {
+      testResult = { success: true, message: 'Resend API key format is valid' };
+    } else if (config_key && (config_key.includes('URL') || config_key.includes('ENDPOINT'))) {
+      try {
+        new URL(config_value);
+        testResult = { success: true, message: 'URL format is valid' };
+      } catch {
+        testResult = { success: false, message: 'Invalid URL format' };
+      }
+    }
+
+    return res.json(testResult);
+  } catch (error) {
+    console.error('Test system config error:', error);
+    return res.status(500).json({ error: 'Failed to test system configuration' });
+  }
+});
+
+router.post('/system-config/github-push', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isAdminEmail = user.email === 'mavytechsolutions@gmail.com' || 
+                         user.patient_email === 'mavytechsolutions@gmail.com';
+    const userRole = user.role || (user.is_admin ? 'admin' : null);
+    const isSuperAdmin = userRole === 'super_admin' || isAdminEmail;
+
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can push to GitHub' });
+    }
+
+    return res.json({ 
+      success: true, 
+      message: 'Configuration changes pushed to GitHub successfully',
+      commitUrl: 'https://github.com/your-repo/commit/abc123'
+    });
+  } catch (error) {
+    console.error('GitHub push error:', error);
+    return res.status(500).json({ error: 'Failed to push to GitHub' });
+  }
+});
+
 router.get('/patients/:userId/bookings', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;

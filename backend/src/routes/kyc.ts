@@ -48,7 +48,14 @@ router.get('/status', authMiddleware, async (req: AuthRequest, res: Response) =>
     if (user.is_verified) {
       status = 'approved';
     } else if (latestSubmission) {
-      status = latestSubmission.status;
+      const submissionDate = new Date(latestSubmission.submitted_at);
+      const userCreatedDate = new Date(user.created_at);
+      
+      if (submissionDate < userCreatedDate) {
+        status = 'not_submitted';
+      } else {
+        status = latestSubmission.status;
+      }
     } else {
       status = 'not_submitted';
     }
@@ -56,7 +63,7 @@ router.get('/status', authMiddleware, async (req: AuthRequest, res: Response) =>
     return res.json({
       status,
       is_verified: user.is_verified || false,
-      kyc_submission: latestSubmission ? {
+      kyc_submission: latestSubmission && status !== 'not_submitted' ? {
         status: latestSubmission.status,
         rejection_reason: latestSubmission.rejection_reason,
         submitted_at: latestSubmission.submitted_at,

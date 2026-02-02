@@ -1823,6 +1823,28 @@ router.delete('/users/:userId', authMiddleware, async (req: AuthRequest, res: Re
       ]
     });
     
+    const { KYCSubmission, Follow, BlockedUser, ConnectionRequest } = await import('../models/index.js');
+    
+    await KYCSubmission.deleteMany({ user_id: userId });
+    await Follow.deleteMany({ 
+      $or: [
+        { follower_user_id: userId },
+        { following_user_id: userId }
+      ]
+    });
+    await BlockedUser.deleteMany({
+      $or: [
+        { blocker_user_id: userId },
+        { blocked_user_id: userId }
+      ]
+    });
+    await ConnectionRequest.deleteMany({
+      $or: [
+        { sender_user_id: userId },
+        { receiver_user_id: userId }
+      ]
+    });
+    
     const user = await User.findOneAndDelete({ user_id: userId });
     
     if (!user) {

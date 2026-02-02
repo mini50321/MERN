@@ -644,6 +644,28 @@ router.delete('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const { KYCSubmission, Follow, BlockedUser, ConnectionRequest } = await import('../models/index.js');
+    
+    await KYCSubmission.deleteMany({ user_id: userId });
+    await Follow.deleteMany({ 
+      $or: [
+        { follower_user_id: userId },
+        { following_user_id: userId }
+      ]
+    });
+    await BlockedUser.deleteMany({
+      $or: [
+        { blocker_user_id: userId },
+        { blocked_user_id: userId }
+      ]
+    });
+    await ConnectionRequest.deleteMany({
+      $or: [
+        { sender_user_id: userId },
+        { receiver_user_id: userId }
+      ]
+    });
+
     await User.deleteOne({ user_id: userId });
 
     res.clearCookie('mavy_session', {

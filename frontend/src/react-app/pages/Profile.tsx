@@ -175,21 +175,24 @@ export default function Profile() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      const userProfile = (user as any).profile;
+    if (!user) {
+      return;
+    }
+    
+    const userProfile = (user as any).profile || user;
+    
+    if (!userProfile?.onboarding_completed) {
+      navigate("/onboarding");
+      return;
+    }
+    
+    if (userProfile?.account_type !== "patient") {
+      loadRatings();
       
-      if (!userProfile?.onboarding_completed) {
-        navigate("/onboarding");
-        return;
+      if (userProfile?.account_type === "partner") {
+        loadTransactions();
       }
-      
-      if (userProfile?.account_type !== "patient") {
-        loadRatings();
-        
-        if (userProfile?.account_type === "partner") {
-          loadTransactions();
-        }
-      }
+    }
       
       const phoneNumber = userProfile?.phone || "";
       setProfile({

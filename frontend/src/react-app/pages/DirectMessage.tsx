@@ -178,9 +178,9 @@ export default function DirectMessage() {
             </div>
           ) : (
             messages.map((msg) => {
-              const isOwnMessage = msg.sender_user_id === user.id;
+              const isOwnMessage = msg.sender_user_id === user.user_id;
               return (
-                <div key={msg.id} className={`flex gap-3 ${isOwnMessage ? "flex-row-reverse" : ""}`}>
+                <div key={msg.id} className={`flex gap-3 ${isOwnMessage ? "justify-end" : "justify-start"}`}>
                   {!isOwnMessage && otherUser && (
                     <div className="flex-shrink-0">
                       {otherUser.profile_picture_url ? (
@@ -190,7 +190,25 @@ export default function DirectMessage() {
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full"></div>
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                          {otherUser.full_name?.[0]?.toUpperCase() || "U"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {isOwnMessage && (
+                    <div className="flex-shrink-0">
+                      {user.profile_picture_url ? (
+                        <img
+                          src={user.profile_picture_url}
+                          alt={user.full_name || user.business_name || "You"}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                          {(user.full_name || user.business_name || "U")[0]?.toUpperCase()}
+                        </div>
                       )}
                     </div>
                   )}
@@ -199,7 +217,7 @@ export default function DirectMessage() {
                     <div className={`inline-block ${isOwnMessage ? "bg-blue-600 text-white" : "bg-white text-gray-900"} rounded-2xl px-4 py-3 shadow`}>
                       <p className="break-words">{msg.message}</p>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className={`text-xs text-gray-500 mt-1 ${isOwnMessage ? "text-right" : ""}`}>
                       {formatTime(msg.created_at)}
                     </div>
                   </div>

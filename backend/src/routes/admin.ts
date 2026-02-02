@@ -37,6 +37,7 @@ router.get('/check-admin', authMiddleware, async (req: AuthRequest, res: Respons
 
     const userRole = user.role || (isAdmin ? 'admin' : null);
     const isSuperAdmin = userRole === 'super_admin' || isAdminEmail;
+    const finalRole = isSuperAdmin ? 'super_admin' : userRole;
 
     const defaultPermissions: Record<string, string> = isAdmin ? {
       posts: 'edit',
@@ -62,7 +63,7 @@ router.get('/check-admin', authMiddleware, async (req: AuthRequest, res: Respons
 
     return res.json({ 
       is_admin: isAdmin,
-      role: userRole,
+      role: finalRole,
       permissions: defaultPermissions
     });
   } catch (error) {

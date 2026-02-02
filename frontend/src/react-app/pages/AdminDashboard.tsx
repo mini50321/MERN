@@ -394,9 +394,12 @@ export default function AdminDashboard() {
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto p-4">
           {navSections.map((section) => {
-            const hasPermission = section.items.some(item => 
-              item.id === "ribbon_settings" ? adminRole === "super_admin" : permissions[item.id]
-            );
+            const hasPermission = section.items.some(item => {
+              if (item.id === "ribbon_settings") {
+                return adminRole === "super_admin" || permissions[item.id];
+              }
+              return permissions[item.id];
+            });
             if (!hasPermission) return null;
 
             const isExpanded = expandedSections[section.id];
@@ -422,15 +425,9 @@ export default function AdminDashboard() {
                 {isExpanded && (
                   <div className="space-y-1">
                     {section.items.map((item) => {
-                      // Super admins can see all items, regular admins need permissions
-                      // ribbon_settings is super admin only
-                      if (item.id === "ribbon_settings") {
-                        if (adminRole !== "super_admin") return null;
-                      } else if (item.id === "bookings" || item.id === "support") {
-                        // Bookings and Support visible if admin has users OR patients permission
+                      if (item.id === "bookings" || item.id === "support") {
                         if (!permissions.users && !permissions.patients) return null;
-                      } else if (item.id === "system_config" || item.id === "pricing" || item.id === "advertising" || item.id === "subscriptions" || item.id === "admins") {
-                        // System settings items - show for all admins (permissions are checked in backend)
+                      } else if (item.id === "system_config" || item.id === "pricing" || item.id === "advertising" || item.id === "subscriptions" || item.id === "admins" || item.id === "ribbon_settings") {
                         if (adminRole !== "super_admin" && !permissions[item.id]) return null;
                       } else if (adminRole !== "super_admin" && !permissions[item.id]) {
                         return null;

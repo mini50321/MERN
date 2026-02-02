@@ -666,4 +666,29 @@ router.delete('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.get('/:userId/profile', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findOne({ user_id: userId })
+      .select('user_id full_name last_name business_name specialisation bio location profile_picture_url is_verified profession account_type')
+      .lean();
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      user_id: user.user_id,
+      full_name: user.full_name || user.business_name || 'Unknown',
+      last_name: user.last_name || '',
+      specialisation: user.specialisation || '',
+      profile_picture_url: user.profile_picture_url || ''
+    });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    return res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
 export default router;

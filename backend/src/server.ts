@@ -37,6 +37,7 @@ import specialitiesRoutes from './routes/specialities.js';
 import businessRoutes from './routes/business.js';
 import chatRoutes from './routes/chat.js';
 import contactRequestsRoutes from './routes/contactRequests.js';
+import directMessagesRoutes from './routes/directMessages.js';
 
 dotenv.config();
 
@@ -105,6 +106,7 @@ app.use('/api/specialities', specialitiesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/contact-requests', contactRequestsRoutes);
+app.use('/api', directMessagesRoutes);
 
 
 const projectRoot = path.resolve(__dirname, '../..');

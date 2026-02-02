@@ -235,8 +235,10 @@ router.get('/requests', authMiddleware, async (req: AuthRequest, res: Response) 
 
     const formattedRequests = requests.map(request => {
       const sender = users.find(u => u.user_id === request.sender_user_id);
+      const idStr = request._id.toString();
+      const idNum = parseInt(idStr.slice(-8), 16) || Date.now();
       return {
-        id: request._id.toString(),
+        id: idNum,
         sender_user_id: request.sender_user_id,
         receiver_user_id: request.receiver_user_id,
         status: request.status,
@@ -417,13 +419,13 @@ router.post('/request/:requestId/accept', authMiddleware, async (req: AuthReques
         status: 'pending'
       }).lean();
       const idNum = parseInt(requestId);
-      request = requests.find(r => {
+      const foundRequest = requests.find(r => {
         const idStr = r._id.toString();
         const numId = parseInt(idStr.slice(-8), 16);
         return numId === idNum;
       });
-      if (request) {
-        request = await ConnectionRequest.findById(request._id);
+      if (foundRequest) {
+        request = await ConnectionRequest.findById(foundRequest._id);
       }
     }
 
@@ -466,18 +468,18 @@ router.post('/request/:requestId/reject', authMiddleware, async (req: AuthReques
         status: 'pending'
       });
     } else {
-      const requests = await ConnectionRequest.find({
+      const allRequests = await ConnectionRequest.find({
         receiver_user_id: req.user!.user_id,
         status: 'pending'
       }).lean();
       const idNum = parseInt(requestId);
-      request = requests.find(r => {
+      const foundRequest = allRequests.find(r => {
         const idStr = r._id.toString();
         const numId = parseInt(idStr.slice(-8), 16);
         return numId === idNum;
       });
-      if (request) {
-        request = await ConnectionRequest.findById(request._id);
+      if (foundRequest) {
+        request = await ConnectionRequest.findById(foundRequest._id);
       }
     }
 

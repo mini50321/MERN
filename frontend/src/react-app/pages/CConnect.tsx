@@ -193,25 +193,38 @@ export default function CConnect() {
 
   const handleAcceptRequest = async (requestId: number) => {
     try {
-      await fetch(`/api/connect/request/${requestId}/accept`, {
+      const response = await fetch(`/api/connect/request/${requestId}/accept`, {
         method: "POST",
       });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "Failed to accept request");
+        return;
+      }
       await fetchData();
       await fetchStats();
     } catch (error) {
       console.error("Error accepting request:", error);
+      alert("Failed to accept request");
     }
   };
 
   const handleRejectRequest = async (requestId: number) => {
     try {
-      await fetch(`/api/connect/request/${requestId}/reject`, {
+      const response = await fetch(`/api/connect/request/${requestId}/reject`, {
         method: "POST",
       });
-      await fetchData();
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.error || "Failed to reject request");
+        return;
+      }
+      setRequests(prev => prev.filter(r => r.id !== requestId));
       await fetchStats();
+      await fetchData();
     } catch (error) {
       console.error("Error rejecting request:", error);
+      alert("Failed to reject request");
     }
   };
 

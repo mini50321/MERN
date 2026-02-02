@@ -64,3 +64,5 @@ export { BlockedUser } from './BlockedUser.js';
 export type { IBlockedUser } from './BlockedUser.js';
 export { ConnectionRequest } from './ConnectionRequest.js';
 export type { IConnectionRequest } from './ConnectionRequest.js';
+export { DirectMessage } from './DirectMessage.js';
+export type { IDirectMessage } from './DirectMessage.js';

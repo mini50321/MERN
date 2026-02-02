@@ -1,4 +1,4 @@
-import express, { Response, NextFunction } from 'express';
+import express, { Response } from 'express';
 import multer from 'multer';
 import { User, KYCSubmission } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';

@@ -101,19 +101,16 @@ export default function Profile() {
   useEffect(() => {
     const preventScrollOnFocus = (e: FocusEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        const target = e.target as HTMLElement;
         const scrollY = window.scrollY;
         const scrollX = window.scrollX;
         
-        const originalScrollIntoView = target.scrollIntoView;
-        target.scrollIntoView = function() {
-          return;
-        };
-        
-        requestAnimationFrame(() => {
-          window.scrollTo(scrollX, scrollY);
-          target.scrollIntoView = originalScrollIntoView;
-        });
+        setTimeout(() => {
+          window.scrollTo({
+            top: scrollY,
+            left: scrollX,
+            behavior: 'instant'
+          });
+        }, 0);
       }
     };
 
@@ -124,8 +121,10 @@ export default function Profile() {
     };
   }, []);
 
+  const [profileInitialized, setProfileInitialized] = useState(false);
+
   useEffect(() => {
-    if (!user) {
+    if (!user || profileInitialized) {
       return;
     }
     
@@ -184,7 +183,9 @@ export default function Profile() {
         setExperienceEntries([]);
       }
     }
-  }, [user]);
+    
+    setProfileInitialized(true);
+  }, [user, profileInitialized]);
 
   const loadRatings = async () => {
     setIsLoadingRatings(true);
@@ -706,9 +707,13 @@ export default function Profile() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                 {isEditing ? (
                   <input
+                    key="full_name_input"
                     type="text"
                     value={profile.full_name || ""}
-                    onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setProfile(prev => ({ ...prev, full_name: e.target.value }));
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
@@ -722,9 +727,13 @@ export default function Profile() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
                 {isEditing ? (
                   <input
+                    key="last_name_input"
                     type="text"
                     value={profile.last_name || ""}
-                    onChange={(e) => setProfile({ ...profile, last_name: e.target.value })}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setProfile(prev => ({ ...prev, last_name: e.target.value }));
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (

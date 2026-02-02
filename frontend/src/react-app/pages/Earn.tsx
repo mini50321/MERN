@@ -529,6 +529,16 @@ export default function Earn() {
             </button>
           </div>
         </div>
+        {showKYCModal && (
+          <KYCVerificationModal
+            onClose={() => setShowKYCModal(false)}
+            kycStatus={kycData}
+            onSubmitSuccess={() => {
+              setShowKYCModal(false);
+              checkKYCStatus();
+            }}
+          />
+        )}
       </DashboardLayout>
     );
   }

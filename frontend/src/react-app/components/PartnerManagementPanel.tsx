@@ -60,6 +60,7 @@ export default function PartnerManagementPanel({ canEdit = true }: { canEdit?: b
     country: "",
     profession: "",
     account_type: "",
+    subscription_tier: "",
   });
   
   const [editingSubscription, setEditingSubscription] = useState<Partner | null>(null);
@@ -120,6 +121,10 @@ export default function PartnerManagementPanel({ canEdit = true }: { canEdit?: b
 
     if (filters.account_type) {
       filtered = filtered.filter(p => p.account_type === filters.account_type);
+    }
+
+    if (filters.subscription_tier) {
+      filtered = filtered.filter(p => (p.subscription_tier || "mavy_lite") === filters.subscription_tier);
     }
     
     setFilteredPartners(filtered);
@@ -391,8 +396,20 @@ export default function PartnerManagementPanel({ canEdit = true }: { canEdit?: b
           <option value="freelancer">Freelancer</option>
         </select>
 
+        <select
+          value={filters.subscription_tier}
+          onChange={(e) => setFilters({ ...filters, subscription_tier: e.target.value })}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+        >
+          <option value="">All Subscriptions</option>
+          <option value="mavy_lite">Mavy Lite</option>
+          <option value="mavy_plus">Mavy Plus</option>
+          <option value="mavy_pro">Mavy Pro</option>
+          <option value="mavy_max">Mavy Max</option>
+        </select>
+
         <button
-          onClick={() => setFilters({ state: "", country: "", profession: "", account_type: "" })}
+          onClick={() => setFilters({ state: "", country: "", profession: "", account_type: "", subscription_tier: "" })}
           className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
         >
           Clear Filters
@@ -488,18 +505,25 @@ export default function PartnerManagementPanel({ canEdit = true }: { canEdit?: b
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    partner.subscription_tier === "mavy_max" ? "bg-purple-100 text-purple-800" :
-                    partner.subscription_tier === "mavy_pro" ? "bg-indigo-100 text-indigo-800" :
-                    partner.subscription_tier === "mavy_plus" ? "bg-blue-100 text-blue-800" :
-                    "bg-gray-100 text-gray-800"
-                  }`}>
-                    {partner.subscription_tier === "mavy_lite" ? "Lite" :
-                     partner.subscription_tier === "mavy_plus" ? "Plus" :
-                     partner.subscription_tier === "mavy_pro" ? "Pro" :
-                     partner.subscription_tier === "mavy_max" ? "Max" :
+                  <button
+                    onClick={() => {
+                      setEditingSubscription(partner);
+                      setEditSubscription(partner.subscription_tier || "mavy_lite");
+                    }}
+                    className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
+                      (partner.subscription_tier || "mavy_lite") === "mavy_max" ? "bg-purple-100 text-purple-800" :
+                      (partner.subscription_tier || "mavy_lite") === "mavy_pro" ? "bg-indigo-100 text-indigo-800" :
+                      (partner.subscription_tier || "mavy_lite") === "mavy_plus" ? "bg-blue-100 text-blue-800" :
+                      "bg-gray-100 text-gray-800"
+                    }`}
+                    title="Click to edit subscription"
+                  >
+                    {(partner.subscription_tier || "mavy_lite") === "mavy_lite" ? "Lite" :
+                     (partner.subscription_tier || "mavy_lite") === "mavy_plus" ? "Plus" :
+                     (partner.subscription_tier || "mavy_lite") === "mavy_pro" ? "Pro" :
+                     (partner.subscription_tier || "mavy_lite") === "mavy_max" ? "Max" :
                      "Lite"}
-                  </span>
+                  </button>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex flex-col gap-1">

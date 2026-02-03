@@ -252,7 +252,8 @@ router.get('/partners', authMiddleware, async (_req: AuthRequest, res: Response)
     const partnersWithRequests = partners.map(partner => ({
       ...partner,
       id: partner._id.toString(),
-      pending_location_requests: 0
+      pending_location_requests: 0,
+      subscription_tier: partner.subscription_tier || 'mavy_lite'
     }));
     
     return res.json(partnersWithRequests);

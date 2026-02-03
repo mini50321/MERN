@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, User, MapPin, Phone, Mail } from "lucide-react";
+import { useAuth } from "@/react-app/contexts/AuthContext";
 
 interface OnboardingFreelancerDetailsProps {
   onNext: (data: any) => void;
@@ -7,6 +8,7 @@ interface OnboardingFreelancerDetailsProps {
 }
 
 export default function OnboardingFreelancerDetails({ onNext, onBack }: OnboardingFreelancerDetailsProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     full_name: "",
     country: "",
@@ -16,6 +18,20 @@ export default function OnboardingFreelancerDetails({ onNext, onBack }: Onboardi
     phone: "",
     email: "",
   });
+
+  useEffect(() => {
+    if (user) {
+      const userEmail = (user as any)?.profile?.email || 
+                        (user as any)?.profile?.patient_email || 
+                        (user as any)?.google_user_data?.email || 
+                        (user as any)?.email || 
+                        "";
+      
+      if (userEmail) {
+        setFormData(prev => ({ ...prev, email: userEmail }));
+      }
+    }
+  }, [user]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

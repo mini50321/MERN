@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting, KYCSubmission, Fundraiser, Course } from '../models/index.js';
+import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting, KYCSubmission, Fundraiser, Course, AdminPermission, Report } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -293,13 +293,94 @@ router.get('/admins', authMiddleware, async (_req: AuthRequest, res: Response) =
         { account_type: 'admin' }
       ]
     }).sort({ created_at: -1 });
-    return res.json(admins.map(admin => ({
-      id: admin._id.toString(),
-      ...admin.toObject()
-    })));
+    
+    const adminsWithPermissions = await Promise.all(
+      admins.map(async (admin) => {
+        const adminId = admin._id.toString();
+        const permissions = await AdminPermission.find({ admin_user_id: adminId });
+        return {
+          id: adminId,
+          ...admin.toObject(),
+          permissions: permissions.map(p => ({
+            tab_name: p.tab_name,
+            permission_level: p.permission_level
+          }))
+        };
+      })
+    );
+    
+    return res.json(adminsWithPermissions);
   } catch (error) {
     console.error('Get admin users error:', error);
     return res.status(500).json({ error: 'Failed to fetch admins' });
+  }
+});
+
+router.put('/admins/:id/permissions', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const adminId = req.params.id;
+    const { permissions } = req.body;
+    
+    if (!permissions || !Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'Permissions array is required' });
+    }
+    
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = user.role === 'super_admin' || 
+                        user.email === 'mavytechsolutions@gmail.com' || 
+                        user.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can manage permissions' });
+    }
+    
+    let targetAdmin;
+    if (adminId.match(/^[0-9a-fA-F]{24}$/)) {
+      targetAdmin = await User.findById(adminId);
+    } else {
+      const allAdmins = await User.find({
+        $or: [
+          { is_admin: true },
+          { role: 'admin' },
+          { role: 'super_admin' },
+          { account_type: 'admin' }
+        ]
+      }).lean();
+      const found = allAdmins.find(a => {
+        const idNum = parseInt(a._id.toString().slice(-8), 16);
+        return idNum === parseInt(adminId, 10);
+      });
+      if (found) {
+        targetAdmin = await User.findById(found._id);
+      }
+    }
+    
+    if (!targetAdmin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+    
+    const targetAdminId = targetAdmin._id.toString();
+    
+    await AdminPermission.deleteMany({ admin_user_id: targetAdminId });
+    
+    for (const perm of permissions) {
+      if (perm.tab_name && perm.permission_level) {
+        await AdminPermission.create({
+          admin_user_id: targetAdminId,
+          tab_name: perm.tab_name,
+          permission_level: perm.permission_level
+        });
+      }
+    }
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Update admin permissions error:', error);
+    return res.status(500).json({ error: 'Failed to update permissions' });
   }
 });
 
@@ -410,10 +491,86 @@ router.delete('/fundraisers/:id', authMiddleware, async (req: AuthRequest, res: 
 
 router.get('/reports', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
-    return res.json([]);
+    const reports = await Report.find().sort({ created_at: -1 }).lean();
+    
+    const reportsWithDetails = await Promise.all(
+      reports.map(async (report: any) => {
+        let itemTitle = 'N/A';
+        let reporterName = 'Unknown';
+        
+        if (report.report_type === 'post') {
+          const newsItem = await NewsUpdate.findById(report.reported_item_id);
+          if (newsItem) {
+            itemTitle = newsItem.title || 'N/A';
+          }
+        } else if (report.report_type === 'exhibition') {
+          const exhibition = await Exhibition.findById(report.reported_item_id);
+          if (exhibition) {
+            itemTitle = exhibition.title || 'N/A';
+          }
+        } else if (report.report_type === 'profile') {
+          const reportedUser = await User.findOne({ user_id: report.reported_user_id || report.reported_item_id });
+          if (reportedUser) {
+            itemTitle = reportedUser.full_name || reportedUser.business_name || 'N/A';
+          }
+        }
+        
+        const reporter = await User.findOne({ user_id: report.reporter_user_id });
+        if (reporter) {
+          reporterName = reporter.full_name || reporter.business_name || 'Unknown';
+        }
+        
+        return {
+          id: report._id.toString(),
+          report_type: report.report_type,
+          item_title: itemTitle,
+          reason: report.reason,
+          description: report.description,
+          status: report.status,
+          reporter_name: reporterName,
+          created_at: report.created_at,
+          updated_at: report.updated_at
+        };
+      })
+    );
+    
+    return res.json(reportsWithDetails);
   } catch (error) {
     console.error('Get admin reports error:', error);
     return res.status(500).json({ error: 'Failed to fetch reports' });
+  }
+});
+
+router.put('/reports/:id/resolve', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const reportId = req.params.id;
+    
+    let report;
+    if (reportId.match(/^[0-9a-fA-F]{24}$/)) {
+      report = await Report.findById(reportId);
+    } else {
+      const allReports = await Report.find().lean();
+      const found = allReports.find(r => {
+        const idNum = parseInt(r._id.toString().slice(-8), 16);
+        return idNum === parseInt(reportId, 10);
+      });
+      if (found) {
+        report = await Report.findById(found._id);
+      }
+    }
+    
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    
+    report.status = 'resolved';
+    report.updated_at = new Date();
+    await report.save();
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Resolve report error:', error);
+    return res.status(500).json({ error: 'Failed to resolve report' });
   }
 });
 

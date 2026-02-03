@@ -66,3 +66,7 @@ export { ConnectionRequest } from './ConnectionRequest.js';
 export type { IConnectionRequest } from './ConnectionRequest.js';
 export { DirectMessage } from './DirectMessage.js';
 export type { IDirectMessage } from './DirectMessage.js';
+export { AdminPermission } from './AdminPermission.js';
+export type { IAdminPermission } from './AdminPermission.js';
+export { Report } from './Report.js';
+export type { IReport } from './Report.js';

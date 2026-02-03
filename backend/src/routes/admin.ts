@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting, KYCSubmission, Fundraiser } from '../models/index.js';
+import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting, KYCSubmission, Fundraiser, Course } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -317,7 +317,23 @@ router.get('/reports', authMiddleware, async (_req: AuthRequest, res: Response) 
 
 router.get('/courses', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
-    return res.json([]);
+    const courses = await Course.find()
+      .sort({ created_at: -1 })
+      .lean();
+    
+    const coursesWithSubmitter = await Promise.all(
+      courses.map(async (course: any) => {
+        const submitter = await User.findOne({ user_id: course.submitted_by_user_id });
+        return {
+          ...course,
+          id: course._id.toString(),
+          submitter_name: submitter ? (submitter.full_name || submitter.business_name || 'Unknown') : 'Unknown',
+          submitter_email: submitter ? (submitter.email || submitter.patient_email || null) : null
+        };
+      })
+    );
+    
+    return res.json(coursesWithSubmitter);
   } catch (error) {
     console.error('Get admin courses error:', error);
     return res.status(500).json({ error: 'Failed to fetch courses' });

@@ -194,14 +194,32 @@ router.get('/ratings', authMiddleware, async (req: AuthRequest, res: Response) =
       return res.status(401).json({ error: 'User not authenticated' });
     }
     
+    const user = await User.findOne({ user_id: userId });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const isPatient = user.account_type === 'patient';
+    
     try {
-      const ratings = await ServiceOrder.find({
-        assigned_engineer_id: userId,
-        status: 'completed',
-        partner_rating: { $exists: true, $ne: null }
-      })
-      .sort({ created_at: -1 })
-      .lean();
+      let ratings;
+      if (isPatient) {
+        ratings = await ServiceOrder.find({
+          patient_user_id: userId,
+          status: 'completed',
+          user_rating: { $exists: true, $ne: null }
+        })
+        .sort({ created_at: -1 })
+        .lean();
+      } else {
+        ratings = await ServiceOrder.find({
+          assigned_engineer_id: userId,
+          status: 'completed',
+          partner_rating: { $exists: true, $ne: null }
+        })
+        .sort({ created_at: -1 })
+        .lean();
+      }
       
       const formattedRatings = (ratings || []).map((order: any) => {
         try {
@@ -236,13 +254,16 @@ router.get('/ratings', authMiddleware, async (req: AuthRequest, res: Response) =
             created_at = new Date().toISOString();
           }
           
+          const rating = isPatient ? (order.user_rating || 0) : (order.partner_rating || 0);
+          const review = isPatient ? (order.user_review || '') : (order.partner_review || '');
+          
           return {
             id: id,
             patient_name: String(order.patient_name || 'Anonymous'),
             service_type: String(order.service_type || 'Service'),
             equipment_name: order.equipment_name ? String(order.equipment_name) : null,
-            partner_rating: Number(order.partner_rating) || 0,
-            partner_review: String(order.partner_review || ''),
+            partner_rating: Number(rating),
+            partner_review: String(review),
             created_at: created_at
           };
         } catch (mapError: any) {
@@ -255,15 +276,29 @@ router.get('/ratings', authMiddleware, async (req: AuthRequest, res: Response) =
         ? formattedRatings.reduce((sum: number, r: any) => sum + (Number(r.partner_rating) || 0), 0) / formattedRatings.length
         : 0;
       
+      const totalCompletedOrders = isPatient
+        ? await ServiceOrder.countDocuments({
+            patient_user_id: userId,
+            status: 'completed'
+          })
+        : await ServiceOrder.countDocuments({
+            assigned_engineer_id: userId,
+            status: 'completed'
+          });
+      
       return res.json({
         ratings: formattedRatings,
-        average_rating: Math.round(avgRating * 10) / 10
+        average_rating: Math.round(avgRating * 10) / 10,
+        total_ratings: formattedRatings.length,
+        total_completed_orders: totalCompletedOrders
       });
     } catch (dbError: any) {
       console.error('Database error fetching ratings:', dbError?.message);
       return res.json({
         ratings: [],
-        average_rating: 0
+        average_rating: 0,
+        total_ratings: 0,
+        total_completed_orders: 0
       });
     }
   } catch (error: any) {

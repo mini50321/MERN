@@ -90,8 +90,6 @@ export default function BannerCarousel() {
     setImageError(true);
   };
 
-  const currentItem = bannerItems[currentIndex];
-
   const goToNext = () => {
     setCurrentIndex((prev) => (prev + 1) % bannerItems.length);
   };

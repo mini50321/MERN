@@ -379,6 +379,35 @@ router.put('/fundraisers/:id', authMiddleware, async (req: AuthRequest, res: Res
   }
 });
 
+router.delete('/fundraisers/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const fundraiserId = req.params.id;
+    
+    let fundraiser;
+    if (fundraiserId.match(/^[0-9a-fA-F]{24}$/)) {
+      fundraiser = await Fundraiser.findByIdAndDelete(fundraiserId);
+    } else {
+      const allFundraisers = await Fundraiser.find().lean();
+      const found = allFundraisers.find(f => {
+        const idNum = parseInt(f._id.toString().slice(-8), 16);
+        return idNum === parseInt(fundraiserId, 10);
+      });
+      if (found) {
+        fundraiser = await Fundraiser.findByIdAndDelete(found._id);
+      }
+    }
+
+    if (!fundraiser) {
+      return res.status(404).json({ error: 'Fundraiser not found' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Delete admin fundraiser error:', error);
+    return res.status(500).json({ error: 'Failed to delete fundraiser' });
+  }
+});
+
 router.get('/reports', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
@@ -494,6 +523,35 @@ router.put('/courses/:id', authMiddleware, async (req: AuthRequest, res: Respons
   } catch (error) {
     console.error('Update admin course error:', error);
     return res.status(500).json({ error: 'Failed to update course' });
+  }
+});
+
+router.delete('/courses/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const courseId = req.params.id;
+    
+    let course;
+    if (courseId.match(/^[0-9a-fA-F]{24}$/)) {
+      course = await Course.findByIdAndDelete(courseId);
+    } else {
+      const allCourses = await Course.find().lean();
+      const found = allCourses.find(c => {
+        const idNum = parseInt(c._id.toString().slice(-8), 16);
+        return idNum === parseInt(courseId, 10);
+      });
+      if (found) {
+        course = await Course.findByIdAndDelete(found._id);
+      }
+    }
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Delete admin course error:', error);
+    return res.status(500).json({ error: 'Failed to delete course' });
   }
 });
 

@@ -50,7 +50,7 @@ const SectionCard = ({ title, icon: Icon, children }: { title: string; icon: any
 );
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -508,11 +508,10 @@ export default function Profile() {
       });
 
       if (response.ok) {
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        await refreshUser();
       } else {
-        alert("Failed to upload profile picture");
+        const errorData = await response.json().catch(() => ({}));
+        alert(errorData.error || "Failed to upload profile picture");
       }
     } catch (error) {
       console.error("Error uploading profile picture:", error);
@@ -589,9 +588,9 @@ export default function Profile() {
             <div className="flex items-center gap-4">
               <div className="relative group">
                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-1">
-                  {(user as any)?.profile?.profile_picture_url ? (
+                  {((user as any)?.profile_picture_url || (user as any)?.profile?.profile_picture_url) ? (
                     <img
-                      src={(user as any).profile.profile_picture_url}
+                      src={(user as any)?.profile_picture_url || (user as any)?.profile?.profile_picture_url}
                       alt="Profile"
                       className="w-full h-full rounded-full object-cover"
                     />

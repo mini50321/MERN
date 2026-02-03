@@ -760,4 +760,107 @@ router.get('/:userId/profile', authMiddleware, async (req: AuthRequest, res: Res
   }
 });
 
+router.post('/set-location', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { latitude, longitude } = req.body;
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({ error: 'Latitude and longitude are required' });
+    }
+    
+    try {
+      const geocodeResponse = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'MavyApp/1.0'
+          }
+        }
+      );
+      
+      if (!geocodeResponse.ok) {
+        throw new Error('Geocoding failed');
+      }
+      
+      const geocodeData = await geocodeResponse.json();
+      const address = geocodeData.address || {};
+      
+      let state = address.state || address.region || address.province || null;
+      let country = address.country || null;
+      
+      if (!state && address.state_district) {
+        state = address.state_district;
+      }
+      
+      if (country && typeof country === 'string') {
+        country = country.trim();
+      }
+      
+      if (state && typeof state === 'string') {
+        state = state.trim();
+      }
+      
+      const updateData: any = {
+        patient_latitude: latitude,
+        patient_longitude: longitude
+      };
+      
+      if (state) {
+        updateData.state = state;
+      }
+      
+      if (country) {
+        updateData.country = country;
+      }
+      
+      if (address.city || address.town || address.village) {
+        updateData.city = address.city || address.town || address.village;
+      }
+      
+      const user = await User.findOneAndUpdate(
+        { user_id: req.user!.user_id },
+        { $set: updateData },
+        { new: true }
+      );
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      return res.json({
+        success: true,
+        state: state,
+        country: country,
+        city: updateData.city || null
+      });
+    } catch (geocodeError) {
+      console.error('Geocoding error:', geocodeError);
+      const user = await User.findOneAndUpdate(
+        { user_id: req.user!.user_id },
+        { 
+          $set: { 
+            patient_latitude: latitude,
+            patient_longitude: longitude
+          } 
+        },
+        { new: true }
+      );
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      return res.json({
+        success: true,
+        state: null,
+        country: null,
+        message: 'Location coordinates saved, but could not determine state/country'
+      });
+    }
+  } catch (error: any) {
+    console.error('Set location error:', error);
+    return res.status(500).json({ error: 'Failed to set location' });
+  }
+});
+
 export default router;

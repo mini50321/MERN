@@ -145,15 +145,60 @@ export default function GlobalChat() {
   }, []);
 
   const [userProfession, setUserProfession] = useState<string | null>(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const hasAttemptedAutoDetection = useRef(false);
+
+  const detectAndSetLocation = async () => {
+    if (!("geolocation" in navigator) || isDetectingLocation) {
+      return;
+    }
+
+    setIsDetectingLocation(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 10000,
+          maximumAge: 0,
+          enableHighAccuracy: true
+        });
+      });
+
+      const response = await fetch("/api/profile/set-location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        })
+      });
+
+      if (response.ok) {
+        await fetchUserLocation();
+      }
+    } catch (error) {
+      console.error("Error detecting location:", error);
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  };
 
   const fetchUserLocation = async () => {
     try {
       const response = await fetch("/api/users/me", { credentials: "include" });
       const data = await response.json();
-      setUserState(data.profile?.state || null);
-      setUserCountry(data.profile?.country || null);
+      const state = data.profile?.state || null;
+      const country = data.profile?.country || null;
+      
+      setUserState(state);
+      setUserCountry(country);
       setUserProfession(data.profile?.profession || "biomedical_engineer");
       setCurrentUserId(data.profile?.user_id || null);
+      
+      if ((!state || !country) && "geolocation" in navigator && !hasAttemptedAutoDetection.current) {
+        hasAttemptedAutoDetection.current = true;
+        await detectAndSetLocation();
+      }
     } catch (error) {
       console.error("Error fetching user location:", error);
     }
@@ -591,8 +636,18 @@ export default function GlobalChat() {
             <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Location Required</h3>
             <p className="text-gray-600 mb-4">
-              Please update your location in your profile to access {activeTab} chat
+              {isDetectingLocation 
+                ? "Detecting your location..." 
+                : "Please update your location in your profile to access " + activeTab + " chat"}
             </p>
+            {!isDetectingLocation && "geolocation" in navigator && (
+              <button
+                onClick={detectAndSetLocation}
+                className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:shadow-md transition-all"
+              >
+                Detect My Location Automatically
+              </button>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col" style={{ height: "calc(100vh - 350px)", minHeight: "500px" }}>

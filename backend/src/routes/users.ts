@@ -782,8 +782,8 @@ router.post('/set-location', authMiddleware, async (req: AuthRequest, res: Respo
         throw new Error('Geocoding failed');
       }
       
-      const geocodeData = await geocodeResponse.json();
-      const address = geocodeData.address || {};
+      const geocodeData = await geocodeResponse.json() as any;
+      const address = geocodeData?.address || {};
       
       let state = address.state || address.region || address.province || null;
       let country = address.country || null;

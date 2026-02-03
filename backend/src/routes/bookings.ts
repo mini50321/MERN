@@ -665,19 +665,20 @@ router.post('/:id/rate', authMiddleware, async (req: AuthRequest, res: Response)
     const order = await ServiceOrder.findOneAndUpdate(
       { 
         _id: req.params.id,
-        patient_user_id: req.user!.user_id 
+        patient_user_id: req.user!.user_id,
+        status: 'completed'
       },
       { 
         $set: { 
-          user_rating: Number(rating),
-          user_review: review || null
+          partner_rating: Number(rating),
+          partner_review: review || null
         }
       },
       { new: true }
     );
 
     if (!order) {
-      return res.status(404).json({ error: 'Booking not found' });
+      return res.status(404).json({ error: 'Booking not found or not completed' });
     }
 
     return res.json({ success: true, order });

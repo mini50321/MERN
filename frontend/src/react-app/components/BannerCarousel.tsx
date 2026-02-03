@@ -16,6 +16,7 @@ export default function BannerCarousel() {
   const [showFullscreenAd, setShowFullscreenAd] = useState(false);
   const [currentFullscreenIndex, setCurrentFullscreenIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fullscreenVideoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,13 +78,17 @@ export default function BannerCarousel() {
     }
   }, [showFullscreenAd, currentFullscreenIndex, fullscreenAds]);
 
-  if (isLoading) {
-    return null;
-  }
+  useEffect(() => {
+    setImageError(false);
+  }, [currentIndex]);
 
-  if (bannerItems.length === 0 && !showFullscreenAd) {
-    return null;
-  }
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const handleVideoError = () => {
+    setImageError(true);
+  };
 
   const currentItem = bannerItems[currentIndex];
 
@@ -157,36 +162,76 @@ export default function BannerCarousel() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="relative w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+          <p className="text-gray-500 text-sm">Loading banners...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (bannerItems.length === 0 && !showFullscreenAd) {
+    return null;
+  }
+
+  const currentItem = bannerItems[currentIndex];
+
   return (
     <>
       {bannerItems.length > 0 && currentItem && (
         <div 
-          className={`relative w-full h-64 bg-gray-900 rounded-2xl overflow-hidden group ${
+          className={`relative w-full h-64 rounded-2xl overflow-hidden group ${
             currentItem.link ? "cursor-pointer" : ""
-          }`}
+          } ${imageError ? "bg-gradient-to-br from-gray-100 to-gray-200" : "bg-gray-900"}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onClick={handleClick}
         >
-          {currentItem.type === "image" ? (
-            <img
-              src={currentItem.url}
-              alt="Banner"
-              className="w-full h-full object-cover"
-            />
+          {imageError ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-gray-400 text-sm mb-2">Content unavailable</p>
+                {bannerItems.length > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      goToNext();
+                    }}
+                    className="text-blue-500 text-xs hover:text-blue-600"
+                  >
+                    Next banner →
+                  </button>
+                )}
+              </div>
+            </div>
           ) : (
-            <video
-              ref={videoRef}
-              src={currentItem.url}
-              className="w-full h-full object-cover"
-              onEnded={handleVideoEnded}
-              playsInline
-              muted
-            />
+            <>
+              {currentItem.type === "image" ? (
+                <img
+                  src={currentItem.url}
+                  alt="Banner"
+                  className="w-full h-full object-cover"
+                  onError={handleImageError}
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  src={currentItem.url}
+                  className="w-full h-full object-cover"
+                  onEnded={handleVideoEnded}
+                  onError={handleVideoError}
+                  playsInline
+                  muted
+                />
+              )}
+            </>
           )}
 
-          {bannerItems.length > 1 && (
+          {bannerItems.length > 1 && !imageError && (
             <>
               <button
                 onClick={(e) => {

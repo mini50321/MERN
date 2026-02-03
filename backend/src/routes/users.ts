@@ -526,6 +526,47 @@ router.post('/resume', authMiddleware, resumeUpload.single('resume'), async (req
   }
 });
 
+router.post('/profile-picture', authMiddleware, upload.single('profile_picture'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No profile picture file provided' });
+    }
+
+    const file = req.file;
+    
+    if (!file.mimetype.startsWith('image/')) {
+      return res.status(400).json({ error: 'File must be an image' });
+    }
+
+    const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
+    const user = await User.findOneAndUpdate(
+      { user_id: req.user!.user_id },
+      { $set: { profile_picture_url: base64Image } },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      profile_picture_url: base64Image,
+      message: 'Profile picture uploaded successfully'
+    });
+  } catch (error: any) {
+    console.error('Upload profile picture error:', error);
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'Profile picture file is too large. Maximum size is 5MB.' });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Failed to upload profile picture' });
+  }
+});
+
 router.get('/resume', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findOne({ user_id: req.user!.user_id });

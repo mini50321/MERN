@@ -17,6 +17,7 @@ export default function BannerCarousel() {
   const [currentFullscreenIndex, setCurrentFullscreenIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [contentLoaded, setContentLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fullscreenVideoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -80,14 +81,25 @@ export default function BannerCarousel() {
 
   useEffect(() => {
     setImageError(false);
+    setContentLoaded(false);
   }, [currentIndex]);
 
   const handleImageError = () => {
     setImageError(true);
+    setContentLoaded(false);
   };
 
   const handleVideoError = () => {
     setImageError(true);
+    setContentLoaded(false);
+  };
+
+  const handleImageLoad = () => {
+    setContentLoaded(true);
+  };
+
+  const handleVideoLoad = () => {
+    setContentLoaded(true);
   };
 
   const goToNext = () => {
@@ -130,14 +142,14 @@ export default function BannerCarousel() {
     goToNext();
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent, item: BannerItem) => {
     const target = e.target as HTMLElement;
     if (target.tagName === "BUTTON" || target.closest("button")) {
       return;
     }
     
-    if (currentItem?.link) {
-      window.open(currentItem.link, "_blank");
+    if (item?.link) {
+      window.open(item.link, "_blank");
     }
   };
 
@@ -183,11 +195,17 @@ export default function BannerCarousel() {
         <div 
           className={`relative w-full h-64 rounded-2xl overflow-hidden group ${
             currentItem.link ? "cursor-pointer" : ""
-          } ${imageError ? "bg-gradient-to-br from-gray-100 to-gray-200" : "bg-gray-900"}`}
+          } ${
+            imageError 
+              ? "bg-gradient-to-br from-gray-100 to-gray-200" 
+              : contentLoaded 
+                ? "bg-gray-900" 
+                : "bg-gradient-to-br from-gray-100 to-gray-200"
+          }`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          onClick={handleClick}
+          onClick={(e) => handleClick(e, currentItem)}
         >
           {imageError ? (
             <div className="w-full h-full flex items-center justify-center">
@@ -206,6 +224,13 @@ export default function BannerCarousel() {
                 )}
               </div>
             </div>
+          ) : !contentLoaded ? (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                <p className="text-gray-400 text-xs">Loading content...</p>
+              </div>
+            </div>
           ) : (
             <>
               {currentItem.type === "image" ? (
@@ -214,6 +239,7 @@ export default function BannerCarousel() {
                   alt="Banner"
                   className="w-full h-full object-cover"
                   onError={handleImageError}
+                  onLoad={handleImageLoad}
                 />
               ) : (
                 <video
@@ -222,6 +248,7 @@ export default function BannerCarousel() {
                   className="w-full h-full object-cover"
                   onEnded={handleVideoEnded}
                   onError={handleVideoError}
+                  onLoadedData={handleVideoLoad}
                   playsInline
                   muted
                 />

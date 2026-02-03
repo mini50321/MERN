@@ -316,6 +316,180 @@ router.get('/admins', authMiddleware, async (_req: AuthRequest, res: Response) =
   }
 });
 
+router.post('/admins', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { email, role, permissions } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    
+    if (!role || (role !== 'admin' && role !== 'super_admin')) {
+      return res.status(400).json({ error: 'Valid role (admin or super_admin) is required' });
+    }
+    
+    const currentUser = await User.findOne({ user_id: req.user!.user_id });
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = currentUser.role === 'super_admin' || 
+                        currentUser.email === 'mavytechsolutions@gmail.com' || 
+                        currentUser.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can create admins' });
+    }
+    
+    let adminUser = await User.findOne({
+      $or: [
+        { email: email },
+        { patient_email: email }
+      ]
+    });
+    
+    if (!adminUser) {
+      const generateReferralCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+      
+      let referralCode = generateReferralCode();
+      let existingUser = await User.findOne({ referral_code: referralCode });
+      while (existingUser) {
+        referralCode = generateReferralCode();
+        existingUser = await User.findOne({ referral_code: referralCode });
+      }
+      
+      const userId = `admin_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      
+      adminUser = await User.create({
+        user_id: userId,
+        email: email,
+        patient_email: email,
+        is_admin: true,
+        role: role,
+        account_type: 'admin',
+        onboarding_completed: true,
+        subscription_tier: 'free',
+        referral_code: referralCode,
+        is_open_to_work: false,
+        is_verified: true
+      });
+    } else {
+      adminUser.is_admin = true;
+      adminUser.role = role;
+      adminUser.account_type = 'admin';
+      adminUser.onboarding_completed = true;
+      if (!adminUser.email) {
+        adminUser.email = email;
+      }
+      if (!adminUser.patient_email) {
+        adminUser.patient_email = email;
+      }
+      await adminUser.save();
+    }
+    
+    const adminId = adminUser._id.toString();
+    
+    if (role === 'admin' && permissions && Array.isArray(permissions) && permissions.length > 0) {
+      await AdminPermission.deleteMany({ admin_user_id: adminId });
+      
+      for (const perm of permissions) {
+        if (perm.tab_name && perm.permission_level) {
+          await AdminPermission.create({
+            admin_user_id: adminId,
+            tab_name: perm.tab_name,
+            permission_level: perm.permission_level
+          });
+        }
+      }
+    } else if (role === 'super_admin') {
+      await AdminPermission.deleteMany({ admin_user_id: adminId });
+    }
+    
+    const adminPermissions = await AdminPermission.find({ admin_user_id: adminId });
+    
+    return res.json({
+      id: adminId,
+      ...adminUser.toObject(),
+      permissions: adminPermissions.map(p => ({
+        tab_name: p.tab_name,
+        permission_level: p.permission_level
+      }))
+    });
+  } catch (error) {
+    console.error('Create admin error:', error);
+    return res.status(500).json({ error: 'Failed to create admin' });
+  }
+});
+
+router.delete('/admins/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const adminId = req.params.id;
+    
+    const currentUser = await User.findOne({ user_id: req.user!.user_id });
+    if (!currentUser) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = currentUser.role === 'super_admin' || 
+                        currentUser.email === 'mavytechsolutions@gmail.com' || 
+                        currentUser.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can delete admins' });
+    }
+    
+    let targetAdmin;
+    if (adminId.match(/^[0-9a-fA-F]{24}$/)) {
+      targetAdmin = await User.findById(adminId);
+    } else {
+      const allAdmins = await User.find({
+        $or: [
+          { is_admin: true },
+          { role: 'admin' },
+          { role: 'super_admin' },
+          { account_type: 'admin' }
+        ]
+      }).lean();
+      const found = allAdmins.find(a => {
+        const idNum = parseInt(a._id.toString().slice(-8), 16);
+        return idNum === parseInt(adminId, 10);
+      });
+      if (found) {
+        targetAdmin = await User.findById(found._id);
+      }
+    }
+    
+    if (!targetAdmin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+    
+    if (targetAdmin.role === 'super_admin' && targetAdmin.email !== currentUser.email && targetAdmin.patient_email !== currentUser.email) {
+      return res.status(403).json({ error: 'Cannot delete another super admin' });
+    }
+    
+    const targetAdminId = targetAdmin._id.toString();
+    
+    await AdminPermission.deleteMany({ admin_user_id: targetAdminId });
+    
+    targetAdmin.is_admin = false;
+    targetAdmin.role = undefined;
+    targetAdmin.account_type = undefined;
+    await targetAdmin.save();
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Delete admin error:', error);
+    return res.status(500).json({ error: 'Failed to delete admin' });
+  }
+});
+
 router.put('/admins/:id/permissions', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const adminId = req.params.id;

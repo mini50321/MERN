@@ -949,6 +949,125 @@ router.put('/subscription-settings', authMiddleware, async (req: AuthRequest, re
   }
 });
 
+router.get('/ribbon-settings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = user.role === 'super_admin' || 
+                        user.email === 'mavytechsolutions@gmail.com' || 
+                        user.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can view ribbon settings' });
+    }
+    
+    const settings = await AppSetting.find({ 
+      setting_key: { $regex: /^ribbon_/ } 
+    }).lean();
+    
+    const settingsMap: Record<string, string> = {
+      ribbon_cutting_enabled: "false",
+      ribbon_heading: "Grand Opening",
+      ribbon_subheading: "Welcome to the Future of Healthcare",
+      ribbon_instruction: "Cut the ribbon to enter",
+      ribbon_button_text: "CUT",
+      ribbon_badge_text: "VIP Launch",
+      ribbon_version: "1"
+    };
+    
+    settings.forEach(setting => {
+      settingsMap[setting.setting_key] = setting.setting_value;
+    });
+    
+    return res.json(settingsMap);
+  } catch (error) {
+    console.error('Get ribbon settings error:', error);
+    return res.status(500).json({ error: 'Failed to fetch ribbon settings' });
+  }
+});
+
+router.put('/ribbon-settings', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = user.role === 'super_admin' || 
+                        user.email === 'mavytechsolutions@gmail.com' || 
+                        user.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can update ribbon settings' });
+    }
+    
+    const body = req.body;
+    const allowedKeys = [
+      'ribbon_cutting_enabled',
+      'ribbon_heading',
+      'ribbon_subheading',
+      'ribbon_instruction',
+      'ribbon_button_text',
+      'ribbon_badge_text',
+      'ribbon_version'
+    ];
+    
+    for (const key of allowedKeys) {
+      if (key in body) {
+        await AppSetting.findOneAndUpdate(
+          { setting_key: key },
+          { 
+            setting_key: key,
+            setting_value: String(body[key])
+          },
+          { upsert: true, new: true }
+        );
+      }
+    }
+    
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Update ribbon settings error:', error);
+    return res.status(500).json({ error: 'Failed to update ribbon settings' });
+  }
+});
+
+router.post('/ribbon-settings/reset', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = user.role === 'super_admin' || 
+                        user.email === 'mavytechsolutions@gmail.com' || 
+                        user.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can reset ribbon' });
+    }
+    
+    const newVersion = Date.now().toString();
+    
+    await AppSetting.findOneAndUpdate(
+      { setting_key: 'ribbon_version' },
+      { 
+        setting_key: 'ribbon_version',
+        setting_value: newVersion
+      },
+      { upsert: true, new: true }
+    );
+    
+    return res.json({ success: true, version: newVersion });
+  } catch (error) {
+    console.error('Reset ribbon error:', error);
+    return res.status(500).json({ error: 'Failed to reset ribbon' });
+  }
+});
+
 router.put('/subscription-plans/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const planId = req.params.id;

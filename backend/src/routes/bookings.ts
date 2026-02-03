@@ -90,6 +90,11 @@ router.post('/submit', authMiddleware, async (req: AuthRequest, res: Response) =
 
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.json([]);
+    }
+    
     const orders = await ServiceOrder.find({ patient_user_id: req.user!.user_id })
       .sort({ created_at: -1 });
     
@@ -115,6 +120,11 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 router.get('/patient', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.json([]);
+    }
+    
     const orders = await ServiceOrder.find({ patient_user_id: req.user!.user_id })
       .sort({ created_at: -1 });
     

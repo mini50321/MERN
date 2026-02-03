@@ -644,7 +644,7 @@ router.delete('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const { KYCSubmission, Follow, BlockedUser, ConnectionRequest } = await import('../models/index.js');
+    const { KYCSubmission, Follow, BlockedUser, ConnectionRequest, ServiceOrder } = await import('../models/index.js');
     
     await KYCSubmission.deleteMany({ user_id: userId });
     await Follow.deleteMany({ 
@@ -663,6 +663,12 @@ router.delete('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       $or: [
         { sender_user_id: userId },
         { receiver_user_id: userId }
+      ]
+    });
+    await ServiceOrder.deleteMany({
+      $or: [
+        { patient_user_id: userId },
+        { assigned_engineer_id: userId }
       ]
     });
 

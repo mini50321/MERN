@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting, KYCSubmission } from '../models/index.js';
+import { User, NewsUpdate, Exhibition, Job, Service, ServiceManual, ServiceOrder, SupportTicket, BannerAd, SubscriptionPlan, AppSetting, KYCSubmission, Fundraiser } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -283,7 +283,23 @@ router.get('/admins', authMiddleware, async (_req: AuthRequest, res: Response) =
 
 router.get('/fundraisers', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
-    return res.json([]);
+    const fundraisers = await Fundraiser.find()
+      .sort({ created_at: -1 })
+      .lean();
+    
+    const fundraisersWithCreator = await Promise.all(
+      fundraisers.map(async (fundraiser: any) => {
+        const creator = await User.findOne({ user_id: fundraiser.created_by_user_id });
+        return {
+          ...fundraiser,
+          id: fundraiser._id.toString(),
+          creator_name: creator ? (creator.full_name || creator.business_name || 'Unknown') : 'Unknown',
+          creator_email: creator ? (creator.email || creator.patient_email || null) : null
+        };
+      })
+    );
+    
+    return res.json(fundraisersWithCreator);
   } catch (error) {
     console.error('Get admin fundraisers error:', error);
     return res.status(500).json({ error: 'Failed to fetch fundraisers' });

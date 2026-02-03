@@ -712,7 +712,7 @@ export default function AdminDashboard() {
 
       {editingFundraiser && (
         <EditFundraiserModal
-          fundraiser={editingFundraiser}
+          fundraiser={{ ...editingFundraiser, isAdminEdit: true }}
           isOpen={true}
           onClose={() => setEditingFundraiser(null)}
           onSuccess={() => {
@@ -892,7 +892,7 @@ function LearningManagementPanel({ courses, onReload, canEdit }: { courses: any[
 
       {editingCourse && (
         <EditCourseModal
-          course={editingCourse}
+          course={{ ...editingCourse, isAdminEdit: true }}
           isOpen={true}
           onClose={() => setEditingCourse(null)}
           onSuccess={() => {

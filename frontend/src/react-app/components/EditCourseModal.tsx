@@ -172,7 +172,8 @@ export default function EditCourseModal({
 
       // Update course
       setUploadProgress("Updating course...");
-      const courseRes = await fetch(`/api/courses/${course.id}`, {
+      const updateEndpoint = (course as any).isAdminEdit ? `/api/admin/courses/${course.id}` : `/api/courses/${course.id}`;
+      const courseRes = await fetch(updateEndpoint, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

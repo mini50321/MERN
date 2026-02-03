@@ -20,7 +20,7 @@ interface Fundraiser {
 }
 
 interface EditFundraiserModalProps {
-  fundraiser: Fundraiser;
+  fundraiser: Fundraiser & { isAdminEdit?: boolean };
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -82,7 +82,8 @@ export default function EditFundraiserModal({ fundraiser, isOpen, onClose, onSuc
     setError("");
 
     try {
-      const response = await fetch(`/api/fundraisers/${fundraiser.id}`, {
+      const updateEndpoint = fundraiser.isAdminEdit ? `/api/admin/fundraisers/${fundraiser.id}` : `/api/fundraisers/${fundraiser.id}`;
+      const response = await fetch(updateEndpoint, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -187,11 +187,33 @@ router.get('/jobs', authMiddleware, async (_req: AuthRequest, res: Response) => 
 
 router.get('/services', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
-    const services = await Service.find().sort({ created_at: -1 });
-    return res.json(services.map(service => ({
-      id: service._id.toString(),
-      ...service.toObject()
-    })));
+    const services = await Service.find()
+      .sort({ created_at: -1 })
+      .lean();
+    
+    const servicesWithProvider = await Promise.all(
+      services.map(async (service: any) => {
+        let providerInfo = {};
+        if (service.posted_by_user_id) {
+          const provider = await User.findOne({ user_id: service.posted_by_user_id });
+          if (provider) {
+            providerInfo = {
+              provider_name: provider.full_name || provider.business_name || service.provider_name || 'Unknown',
+              provider_email: provider.email || provider.patient_email || null
+            };
+          }
+        }
+        
+        return {
+          ...service,
+          id: service._id.toString(),
+          provider_name: service.provider_name || (service.posted_by_user_id ? 'Unknown' : null),
+          ...providerInfo
+        };
+      })
+    );
+    
+    return res.json(servicesWithProvider);
   } catch (error) {
     console.error('Get admin services error:', error);
     return res.status(500).json({ error: 'Failed to fetch services' });
@@ -306,6 +328,57 @@ router.get('/fundraisers', authMiddleware, async (_req: AuthRequest, res: Respon
   }
 });
 
+router.put('/fundraisers/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const fundraiserId = req.params.id;
+    const body = req.body;
+    
+    let fundraiser;
+    if (fundraiserId.match(/^[0-9a-fA-F]{24}$/)) {
+      fundraiser = await Fundraiser.findById(fundraiserId);
+    } else {
+      const allFundraisers = await Fundraiser.find().lean();
+      const found = allFundraisers.find(f => {
+        const idNum = parseInt(f._id.toString().slice(-8), 16);
+        return idNum === parseInt(fundraiserId, 10);
+      });
+      if (found) {
+        fundraiser = await Fundraiser.findById(found._id);
+      }
+    }
+
+    if (!fundraiser) {
+      return res.status(404).json({ error: 'Fundraiser not found' });
+    }
+
+    if (body.title) fundraiser.title = String(body.title);
+    if (body.description) fundraiser.description = String(body.description);
+    if (body.category) fundraiser.category = String(body.category);
+    if (body.case_type) fundraiser.case_type = String(body.case_type);
+    if (body.goal_amount !== undefined) fundraiser.goal_amount = parseFloat(String(body.goal_amount));
+    if (body.currency) fundraiser.currency = String(body.currency);
+    if (body.beneficiary_name) fundraiser.beneficiary_name = String(body.beneficiary_name);
+    if (body.beneficiary_contact !== undefined) fundraiser.beneficiary_contact = body.beneficiary_contact ? String(body.beneficiary_contact) : null;
+    if (body.image_url !== undefined) fundraiser.image_url = body.image_url || null;
+    if (body.end_date !== undefined) fundraiser.end_date = body.end_date ? new Date(body.end_date) : null;
+    if (body.documents && Array.isArray(body.documents)) {
+      fundraiser.documents = body.documents.map((doc: any) => ({
+        document_type: String(doc.document_type),
+        file_url: String(doc.file_url),
+        file_name: String(doc.file_name || 'document')
+      }));
+    }
+    if (body.status) fundraiser.status = String(body.status);
+
+    await fundraiser.save();
+
+    return res.json({ success: true, fundraiser });
+  } catch (error) {
+    console.error('Update admin fundraiser error:', error);
+    return res.status(500).json({ error: 'Failed to update fundraiser' });
+  }
+});
+
 router.get('/reports', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
     return res.json([]);
@@ -337,6 +410,90 @@ router.get('/courses', authMiddleware, async (_req: AuthRequest, res: Response) 
   } catch (error) {
     console.error('Get admin courses error:', error);
     return res.status(500).json({ error: 'Failed to fetch courses' });
+  }
+});
+
+router.put('/courses/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const courseId = req.params.id;
+    const body = req.body;
+    
+    let course;
+    if (courseId.match(/^[0-9a-fA-F]{24}$/)) {
+      course = await Course.findByIdAndUpdate(
+        courseId,
+        {
+          $set: {
+            title: body.title,
+            description: body.description,
+            category: body.category,
+            duration_hours: body.duration_hours,
+            modules_count: body.modules_count,
+            video_url: body.video_url,
+            image_url: body.image_url,
+            thumbnail_url: body.image_url || body.thumbnail_url,
+            instructor_name: body.instructor_name,
+            instructor_bio: body.instructor_bio,
+            instructor_credentials: body.instructor_credentials,
+            instructor_image_url: body.instructor_image_url,
+            learning_objectives: body.learning_objectives,
+            prerequisites: body.prerequisites,
+            course_outline: body.course_outline || body.content,
+            equipment_name: body.equipment_name,
+            equipment_model: body.equipment_model,
+            price: body.price,
+            currency: body.currency,
+            updated_at: new Date()
+          }
+        },
+        { new: true, runValidators: true }
+      );
+    } else {
+      const allCourses = await Course.find().lean();
+      const found = allCourses.find(c => {
+        const idNum = parseInt(c._id.toString().slice(-8), 16);
+        return idNum === parseInt(courseId, 10);
+      });
+      if (found) {
+        course = await Course.findByIdAndUpdate(
+          found._id,
+          {
+            $set: {
+              title: body.title,
+              description: body.description,
+              category: body.category,
+              duration_hours: body.duration_hours,
+              modules_count: body.modules_count,
+              video_url: body.video_url,
+              image_url: body.image_url,
+              thumbnail_url: body.image_url || body.thumbnail_url,
+              instructor_name: body.instructor_name,
+              instructor_bio: body.instructor_bio,
+              instructor_credentials: body.instructor_credentials,
+              instructor_image_url: body.instructor_image_url,
+              learning_objectives: body.learning_objectives,
+              prerequisites: body.prerequisites,
+              course_outline: body.course_outline || body.content,
+              equipment_name: body.equipment_name,
+              equipment_model: body.equipment_model,
+              price: body.price,
+              currency: body.currency,
+              updated_at: new Date()
+            }
+          },
+          { new: true, runValidators: true }
+        );
+      }
+    }
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    return res.json({ course, success: true });
+  } catch (error) {
+    console.error('Update admin course error:', error);
+    return res.status(500).json({ error: 'Failed to update course' });
   }
 });
 

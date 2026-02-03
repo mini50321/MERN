@@ -5,6 +5,7 @@ import KYCVerificationModal from "@/react-app/components/KYCVerificationModal";
 import PartnerOrderNotification from "@/react-app/components/PartnerOrderNotification";
 import { useNursingPrices } from "@/react-app/hooks/useNursingPrices";
 import { usePhysiotherapyPrices } from "@/react-app/hooks/usePhysiotherapyPrices";
+import { useAmbulancePrices } from "@/react-app/hooks/useAmbulancePrices";
 import { 
   DollarSign, 
   Clock, 
@@ -64,6 +65,7 @@ export default function Earn() {
   const { showSuccess, showError } = useToast();
   const { getPriceForService: getNursingPrice } = useNursingPrices();
   const { getPriceForService: getPhysiotherapyPrice } = usePhysiotherapyPrices();
+  const { prices: ambulancePrices } = useAmbulancePrices();
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -167,6 +169,7 @@ export default function Earn() {
         const category = (order.service_category || "").toLowerCase();
         const isNursing = category.includes("nursing");
         const isPhysio = category.includes("physio");
+        const isAmbulance = category.includes("ambulance");
         
         if (isNursing || isPhysio) {
           const serviceNameVariations = [
@@ -191,6 +194,16 @@ export default function Earn() {
             priceToUse = isNursing 
               ? (priceData as any).per_visit_price 
               : (priceData as any).per_session_price;
+          }
+        } else if (isAmbulance && order.service_type) {
+          const ambulancePrice = ambulancePrices.find(
+            p => p.service_name.toLowerCase() === order.service_type.toLowerCase() ||
+                 order.service_type.toLowerCase().includes(p.service_name.toLowerCase()) ||
+                 p.service_name.toLowerCase().includes(order.service_type.toLowerCase())
+          );
+          
+          if (ambulancePrice) {
+            priceToUse = ambulancePrice.minimum_fare;
           }
         }
       }

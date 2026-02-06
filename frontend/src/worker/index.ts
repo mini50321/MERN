@@ -8992,7 +8992,7 @@ app.get("/api/chat/messages", authMiddleware, async (c) => {
   // Get user's profession - restrict chat access to same profession only
   const userProfession = profile?.profession || "biomedical_engineer";
 
-  let query = `SELECT gcm.*, up.full_name, up.profile_picture_url 
+  let query = `SELECT gcm.*, up.full_name, up.profile_picture_url, up.country, up.state, up.email 
                FROM global_chat_messages gcm 
                LEFT JOIN user_profiles up ON gcm.user_id = up.user_id 
                WHERE gcm.chat_scope = ? AND (gcm.profession = ? OR gcm.profession IS NULL)`;

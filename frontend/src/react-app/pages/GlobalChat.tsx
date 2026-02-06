@@ -13,6 +13,9 @@ interface ChatMessage {
   created_at: string;
   full_name: string | null;
   profile_picture_url: string | null;
+  country: string | null;
+  state: string | null;
+  email: string | null;
   attachment_url: string | null;
   attachment_type: string | null;
   attachment_name: string | null;
@@ -900,8 +903,13 @@ export default function GlobalChat() {
                                   <div className={`flex-1 max-w-md ${isOwnMessage ? "text-right" : ""}`}>
                                     <div className={`inline-block ${isOwnMessage ? "bg-blue-600 text-white" : "bg-white text-gray-900"} rounded-2xl px-4 py-3 shadow relative group`}>
                                       {!isOwnMessage && (
-                                        <div className="font-semibold text-sm mb-1">
-                                          {msg.full_name || "Anonymous"}
+                                        <div className="font-semibold text-sm mb-1 flex items-center gap-2 flex-wrap">
+                                          <span>{msg.full_name || msg.email?.split('@')[0] || `User ${msg.user_id.slice(-4)}`}</span>
+                                          {(msg.country || msg.state) && (
+                                            <span className="text-xs font-normal text-gray-500 opacity-75">
+                                              {msg.state ? `${msg.state}, ` : ''}{msg.country || ''}
+                                            </span>
+                                          )}
                                         </div>
                                       )}
                                       <p className="break-words">{msg.message}</p>

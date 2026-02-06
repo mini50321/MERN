@@ -40,7 +40,7 @@ router.get('/messages', authMiddleware, async (req: AuthRequest, res: Response) 
     }
 
     const messages = await ChatMessage.find(query)
-      .sort({ created_at: -1 })
+      .sort({ created_at: 1 })
       .limit(100)
       .lean();
 

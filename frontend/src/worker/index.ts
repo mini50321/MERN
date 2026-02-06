@@ -9006,7 +9006,7 @@ app.get("/api/chat/messages", authMiddleware, async (c) => {
     params.push(profile.country);
   }
 
-  query += " ORDER BY gcm.created_at DESC LIMIT 100";
+  query += " ORDER BY gcm.created_at ASC LIMIT 100";
 
   const { results } = await c.env.DB.prepare(query).bind(...params).all();
 
@@ -9036,7 +9036,7 @@ app.get("/api/chat/messages", authMiddleware, async (c) => {
     })
   );
 
-  return c.json(messagesWithMetadata.reverse());
+  return c.json(messagesWithMetadata);
 });
 
 app.post("/api/chat/messages", authMiddleware, async (c) => {

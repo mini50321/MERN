@@ -347,7 +347,10 @@ export default function GlobalChat() {
           throw new Error(`Failed to fetch messages: ${response.status}`);
         }
         const data = await response.json();
-        setMessages(Array.isArray(data) ? data : []);
+        const sortedMessages = Array.isArray(data) 
+          ? [...data].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          : [];
+        setMessages(sortedMessages);
       } else {
         const response = await fetch(`/api/contact-requests?scope=${activeTab}`, {
           credentials: "include"
@@ -655,7 +658,11 @@ export default function GlobalChat() {
       return grouped;
     }
     
-    messages.forEach(msg => {
+    const sortedMessages = [...messages].sort((a, b) => {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+    
+    sortedMessages.forEach(msg => {
       const dateKey = getMessageDate(msg.created_at);
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
@@ -663,7 +670,16 @@ export default function GlobalChat() {
       grouped[dateKey].push(msg);
     });
 
-    return grouped;
+    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
+
+    const sortedGrouped: { [key: string]: ChatMessage[] } = {};
+    sortedKeys.forEach(key => {
+      sortedGrouped[key] = grouped[key];
+    });
+
+    return sortedGrouped;
   };
 
   const getTabLabel = () => {

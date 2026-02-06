@@ -1,5 +1,5 @@
 import express, { Response } from 'express';
-import { User, Transaction, ReferralTracking } from '../models/index.js';
+import { User, Transaction, ReferralTracking, AppSetting } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -132,6 +132,19 @@ router.get('/wallet', authMiddleware, async (req: AuthRequest, res: Response) =>
   } catch (error) {
     console.error('Get wallet error:', error);
     return res.status(500).json({ error: 'Failed to fetch wallet' });
+  }
+});
+
+router.get('/subscription-settings', authMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const setting = await AppSetting.findOne({ setting_key: 'yearly_discount_percentage' });
+    
+    return res.json({
+      yearly_discount_percentage: setting ? parseInt(setting.setting_value) : 17
+    });
+  } catch (error) {
+    console.error('Get subscription settings error:', error);
+    return res.status(500).json({ error: 'Failed to fetch subscription settings' });
   }
 });
 

@@ -87,6 +87,9 @@ export default function GlobalChat() {
   const [editingContactRequest, setEditingContactRequest] = useState<ContactRequest | null>(null);
   const [contactReplies, setContactReplies] = useState<ContactReply[]>([]);
   const [showContactRepliesModal, setShowContactRepliesModal] = useState(false);
+  const [userProfession, setUserProfession] = useState<string | null>(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -95,6 +98,7 @@ export default function GlobalChat() {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const previousMessageCountRef = useRef(0);
+  const locationDetectionAttempted = useRef(false);
 
   useEffect(() => {
     if (user) {
@@ -157,11 +161,6 @@ export default function GlobalChat() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const [userProfession, setUserProfession] = useState<string | null>(null);
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const locationDetectionAttempted = useRef(false);
 
   const detectAndSetLocation = async (showError = true) => {
     if (!("geolocation" in navigator) || isDetectingLocation) {
@@ -706,7 +705,7 @@ export default function GlobalChat() {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
                   {"geolocation" in navigator && (
                     <button
-                      onClick={detectAndSetLocation}
+                      onClick={() => detectAndSetLocation(true)}
                       className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:shadow-md transition-all"
                     >
                       Detect My Location Automatically

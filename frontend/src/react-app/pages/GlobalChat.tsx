@@ -99,8 +99,20 @@ export default function GlobalChat() {
   useEffect(() => {
     if (user) {
       fetchUserLocation();
+    } else {
+      locationDetectionAttempted.current = false;
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && !userState && !userCountry && !isDetectingLocation && !locationDetectionAttempted.current && "geolocation" in navigator) {
+      const timer = setTimeout(() => {
+        locationDetectionAttempted.current = true;
+        detectAndSetLocation(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, userState, userCountry, isDetectingLocation]);
 
   useEffect(() => {
     if (user && (activeTab === "global" || (activeTab === "state" && userState) || (activeTab === "country" && userCountry))) {
@@ -149,21 +161,24 @@ export default function GlobalChat() {
   const [userProfession, setUserProfession] = useState<string | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const hasAttemptedAutoDetection = useRef(false);
+  const locationDetectionAttempted = useRef(false);
 
-  const detectAndSetLocation = async () => {
+  const detectAndSetLocation = async (showError = true) => {
     if (!("geolocation" in navigator) || isDetectingLocation) {
-      return;
+      return false;
     }
 
     setIsDetectingLocation(true);
-    setLocationError(null);
+    if (showError) {
+      setLocationError(null);
+    }
+    
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-          timeout: 10000,
-          maximumAge: 0,
-          enableHighAccuracy: true
+          timeout: 15000,
+          maximumAge: 300000,
+          enableHighAccuracy: false
         });
       });
 
@@ -180,21 +195,28 @@ export default function GlobalChat() {
       if (response.ok) {
         await fetchUserLocation();
         setLocationError(null);
+        return true;
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setLocationError(errorData.error || "Failed to save location. Please try again or set it manually in your profile.");
+        if (showError) {
+          setLocationError(errorData.error || "Failed to save location. Please try again or set it manually in your profile.");
+        }
+        return false;
       }
     } catch (error: any) {
       console.error("Error detecting location:", error);
-      if (error.code === 1) {
-        setLocationError("Location access was denied. Please enable location permissions in your browser settings or set your location manually in your profile.");
-      } else if (error.code === 2) {
-        setLocationError("Unable to determine your location. Please set it manually in your profile.");
-      } else if (error.code === 3) {
-        setLocationError("Location request timed out. Please try again or set your location manually.");
-      } else {
-        setLocationError("Failed to detect location. Please set it manually in your profile.");
+      if (showError) {
+        if (error.code === 1) {
+          setLocationError("Location access was denied. Please enable location permissions in your browser settings or set your location manually in your profile.");
+        } else if (error.code === 2) {
+          setLocationError("Unable to determine your location. Please set it manually in your profile.");
+        } else if (error.code === 3) {
+          setLocationError("Location request timed out. Please try again or set your location manually.");
+        } else {
+          setLocationError("Failed to detect location. Please set it manually in your profile.");
+        }
       }
+      return false;
     } finally {
       setIsDetectingLocation(false);
     }
@@ -219,11 +241,15 @@ export default function GlobalChat() {
       setUserProfession(data.profile?.profession || "biomedical_engineer");
       setCurrentUserId(data.profile?.user_id || null);
       
-      if ((!state || !country) && "geolocation" in navigator && !hasAttemptedAutoDetection.current) {
-        hasAttemptedAutoDetection.current = true;
-        setTimeout(() => {
-          detectAndSetLocation();
-        }, 500);
+      if ((!state || !country) && "geolocation" in navigator) {
+        if (!locationDetectionAttempted.current) {
+          locationDetectionAttempted.current = true;
+          setTimeout(() => {
+            detectAndSetLocation(true);
+          }, 1000);
+        }
+      } else if (state && country) {
+        locationDetectionAttempted.current = false;
       }
     } catch (error) {
       console.error("Error fetching user location:", error);

@@ -2600,8 +2600,15 @@ function SubscriptionManagementPanel({ plans, onReload, canEdit }: { plans: any[
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {plans.sort((a, b) => a.display_order - b.display_order).map((plan) => {
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Subscription Plans</h2>
+        {plans.length === 0 ? (
+          <div className="bg-white rounded-lg p-8 text-center">
+            <p className="text-gray-600">No subscription plans found. Plans will appear here once they are created.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {plans.sort((a, b) => a.display_order - b.display_order).map((plan) => {
           const isFree = (plan.monthly_price || plan.price) === 0;
           const monthlyPrice = plan.monthly_price || plan.price || 0;
           const yearlyPrice = plan.yearly_price || (plan.monthly_price ? plan.monthly_price * 10 : plan.price * 10) || 0;
@@ -2686,6 +2693,8 @@ function SubscriptionManagementPanel({ plans, onReload, canEdit }: { plans: any[
             </div>
           );
         })}
+          </div>
+        )}
       </div>
 
       {editingPlan && (

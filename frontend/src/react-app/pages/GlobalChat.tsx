@@ -175,8 +175,34 @@ export default function GlobalChat() {
     }
   };
 
+  const detectLocationFromIP = async (): Promise<{ latitude: number; longitude: number } | null> => {
+    try {
+      const response = await fetch("https://ipapi.co/json/", {
+        timeout: 10000
+      } as any);
+      
+      if (!response.ok) {
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.latitude && data.longitude) {
+        return {
+          latitude: data.latitude,
+          longitude: data.longitude
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("IP geolocation error:", error);
+      return null;
+    }
+  };
+
   const detectAndSetLocation = async (showError = true) => {
-    if (!("geolocation" in navigator) || isDetectingLocation) {
+    if (isDetectingLocation) {
       return false;
     }
 
@@ -185,32 +211,59 @@ export default function GlobalChat() {
       setLocationError(null);
     }
 
-    const permissionStatus = await checkLocationPermission();
-    
-    if (permissionStatus === 'denied') {
-      setIsDetectingLocation(false);
-      if (showError) {
-        setLocationError("Location permission was previously denied. Please enable it in your browser settings: Click the lock icon in the address bar → Site settings → Location → Allow. Then refresh this page and try again.");
-      }
-      return false;
-    }
-    
-    try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          timeout: 15000,
-          maximumAge: 300000,
-          enableHighAccuracy: false
-        });
-      });
+    let latitude: number | null = null;
+    let longitude: number | null = null;
 
+    if ("geolocation" in navigator) {
+      const permissionStatus = await checkLocationPermission();
+      
+      if (permissionStatus !== 'denied') {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 10000,
+              maximumAge: 300000,
+              enableHighAccuracy: false
+            });
+          });
+          
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+        } catch (error: any) {
+          console.error("Browser geolocation error:", error);
+          if (error.code === 1 && showError) {
+            setLocationError("Browser location access denied. Trying alternative method...");
+          }
+        }
+      }
+    }
+
+    if (!latitude || !longitude) {
+      if (showError) {
+        setLocationError("Using IP-based location detection...");
+      }
+      
+      const ipLocation = await detectLocationFromIP();
+      if (ipLocation) {
+        latitude = ipLocation.latitude;
+        longitude = ipLocation.longitude;
+      } else {
+        setIsDetectingLocation(false);
+        if (showError) {
+          setLocationError("Unable to automatically detect your location. Please set it manually in your profile.");
+        }
+        return false;
+      }
+    }
+
+    try {
       const response = await fetch("/api/profile/set-location", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
+          latitude: latitude,
+          longitude: longitude
         })
       });
 
@@ -226,17 +279,9 @@ export default function GlobalChat() {
         return false;
       }
     } catch (error: any) {
-      console.error("Error detecting location:", error);
+      console.error("Error saving location:", error);
       if (showError) {
-        if (error.code === 1) {
-          setLocationError("Location access was denied. To enable: Click the lock icon (🔒) in your browser's address bar → Site settings → Location → Allow. Then refresh this page and try again. Alternatively, you can set your location manually in your profile.");
-        } else if (error.code === 2) {
-          setLocationError("Unable to determine your location. Please set it manually in your profile.");
-        } else if (error.code === 3) {
-          setLocationError("Location request timed out. Please try again or set your location manually.");
-        } else {
-          setLocationError("Failed to detect location. Please set it manually in your profile.");
-        }
+        setLocationError("Failed to save location. Please try again or set it manually in your profile.");
       }
       return false;
     } finally {

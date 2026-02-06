@@ -162,6 +162,19 @@ export default function GlobalChat() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const checkLocationPermission = async (): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> => {
+    if (!("permissions" in navigator)) {
+      return 'unknown';
+    }
+
+    try {
+      const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+      return result.state as 'granted' | 'denied' | 'prompt';
+    } catch (error) {
+      return 'unknown';
+    }
+  };
+
   const detectAndSetLocation = async (showError = true) => {
     if (!("geolocation" in navigator) || isDetectingLocation) {
       return false;
@@ -170,6 +183,16 @@ export default function GlobalChat() {
     setIsDetectingLocation(true);
     if (showError) {
       setLocationError(null);
+    }
+
+    const permissionStatus = await checkLocationPermission();
+    
+    if (permissionStatus === 'denied') {
+      setIsDetectingLocation(false);
+      if (showError) {
+        setLocationError("Location permission was previously denied. Please enable it in your browser settings: Click the lock icon in the address bar → Site settings → Location → Allow. Then refresh this page and try again.");
+      }
+      return false;
     }
     
     try {
@@ -206,7 +229,7 @@ export default function GlobalChat() {
       console.error("Error detecting location:", error);
       if (showError) {
         if (error.code === 1) {
-          setLocationError("Location access was denied. Please enable location permissions in your browser settings or set your location manually in your profile.");
+          setLocationError("Location access was denied. To enable: Click the lock icon (🔒) in your browser's address bar → Site settings → Location → Allow. Then refresh this page and try again. Alternatively, you can set your location manually in your profile.");
         } else if (error.code === 2) {
           setLocationError("Unable to determine your location. Please set it manually in your profile.");
         } else if (error.code === 3) {
@@ -698,8 +721,20 @@ export default function GlobalChat() {
                   Please update your location in your profile to access {activeTab} chat
                 </p>
                 {locationError && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">{locationError}</p>
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800 font-medium mb-2">{locationError}</p>
+                    {locationError.includes("previously denied") && (
+                      <div className="mt-3 p-3 bg-white rounded border border-red-200">
+                        <p className="text-xs text-gray-700 font-semibold mb-2">How to enable location permission:</p>
+                        <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+                          <li>Look for the lock icon (🔒) or information icon (i) in your browser's address bar</li>
+                          <li>Click on it to open site settings</li>
+                          <li>Find "Location" in the permissions list</li>
+                          <li>Change it from "Block" to "Allow"</li>
+                          <li>Refresh this page and try again</li>
+                        </ol>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">

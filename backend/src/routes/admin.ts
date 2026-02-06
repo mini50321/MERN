@@ -889,9 +889,55 @@ router.delete('/courses/:id', authMiddleware, async (req: AuthRequest, res: Resp
 
 router.get('/subscription-plans', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
-    const plans = await SubscriptionPlan.find()
+    let plans = await SubscriptionPlan.find()
       .sort({ display_order: 1 })
       .lean();
+    
+    if (plans.length === 0) {
+      const defaultPlans = [
+        {
+          tier_name: 'mavy_lite',
+          monthly_price: 0,
+          yearly_price: 0,
+          currency: 'USD',
+          benefits: JSON.stringify(['Basic profile features', 'View news and exhibitions', 'Limited job applications']),
+          is_active: true,
+          display_order: 1
+        },
+        {
+          tier_name: 'mavy_plus',
+          monthly_price: 9.99,
+          yearly_price: 99.90,
+          currency: 'USD',
+          benefits: JSON.stringify(['All Free features', 'Unlimited job applications', 'Priority support', 'Advanced analytics', 'Profile verification badge']),
+          is_active: true,
+          display_order: 2
+        },
+        {
+          tier_name: 'mavy_pro',
+          monthly_price: 29.99,
+          yearly_price: 299.90,
+          currency: 'USD',
+          benefits: JSON.stringify(['All Premium features', 'Featured profile listings', 'Direct messaging', 'Course access', 'Business tools', 'API access']),
+          is_active: true,
+          display_order: 3
+        },
+        {
+          tier_name: 'mavy_max',
+          monthly_price: 49.99,
+          yearly_price: 499.90,
+          currency: 'USD',
+          benefits: JSON.stringify(['All Pro features', 'Exclusive content', 'Premium job listings', 'Analytics dashboard', 'White-label options', 'Dedicated support']),
+          is_active: true,
+          display_order: 4
+        }
+      ];
+      
+      await SubscriptionPlan.insertMany(defaultPlans);
+      plans = await SubscriptionPlan.find()
+        .sort({ display_order: 1 })
+        .lean();
+    }
     
     const formattedPlans = plans.map(plan => ({
       id: parseInt(plan._id.toString().slice(-8), 16) || Date.now(),

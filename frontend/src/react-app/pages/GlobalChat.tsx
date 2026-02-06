@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/react-app/contexts/AuthContext";
+import { useNavigate } from "react-router";
 import DashboardLayout from "@/react-app/components/DashboardLayout";
 import { Send, MapPin, Globe, Users, Loader2, Smile, Paperclip, Reply, Trash2, X, FileText, Image as ImageIcon, Film, Phone, Building2, Plus, MessageCircle, Edit2 } from "lucide-react";
 
@@ -62,6 +63,7 @@ const COMMON_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🎉",
 
 export default function GlobalChat() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"state" | "country" | "global">("state");
   const [activeView, setActiveView] = useState<"chat" | "contacts">("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -146,6 +148,7 @@ export default function GlobalChat() {
 
   const [userProfession, setUserProfession] = useState<string | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const hasAttemptedAutoDetection = useRef(false);
 
   const detectAndSetLocation = async () => {
@@ -154,6 +157,7 @@ export default function GlobalChat() {
     }
 
     setIsDetectingLocation(true);
+    setLocationError(null);
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -175,9 +179,22 @@ export default function GlobalChat() {
 
       if (response.ok) {
         await fetchUserLocation();
+        setLocationError(null);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setLocationError(errorData.error || "Failed to save location. Please try again or set it manually in your profile.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error detecting location:", error);
+      if (error.code === 1) {
+        setLocationError("Location access was denied. Please enable location permissions in your browser settings or set your location manually in your profile.");
+      } else if (error.code === 2) {
+        setLocationError("Unable to determine your location. Please set it manually in your profile.");
+      } else if (error.code === 3) {
+        setLocationError("Location request timed out. Please try again or set your location manually.");
+      } else {
+        setLocationError("Failed to detect location. Please set it manually in your profile.");
+      }
     } finally {
       setIsDetectingLocation(false);
     }
@@ -186,6 +203,13 @@ export default function GlobalChat() {
   const fetchUserLocation = async () => {
     try {
       const response = await fetch("/api/users/me", { credentials: "include" });
+      if (!response.ok) {
+        if (response.status === 401) {
+          setLocationError("Please sign in to access location features.");
+          return;
+        }
+        throw new Error(`Failed to fetch user data: ${response.status}`);
+      }
       const data = await response.json();
       const state = data.profile?.state || null;
       const country = data.profile?.country || null;
@@ -197,10 +221,13 @@ export default function GlobalChat() {
       
       if ((!state || !country) && "geolocation" in navigator && !hasAttemptedAutoDetection.current) {
         hasAttemptedAutoDetection.current = true;
-        await detectAndSetLocation();
+        setTimeout(() => {
+          detectAndSetLocation();
+        }, 500);
       }
     } catch (error) {
       console.error("Error fetching user location:", error);
+      setLocationError("Failed to load your profile. Please refresh the page.");
     }
   };
 
@@ -635,18 +662,38 @@ export default function GlobalChat() {
           <div className="bg-white rounded-2xl p-12 shadow-lg text-center">
             <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Location Required</h3>
-            <p className="text-gray-600 mb-4">
-              {isDetectingLocation 
-                ? "Detecting your location..." 
-                : "Please update your location in your profile to access " + activeTab + " chat"}
-            </p>
-            {!isDetectingLocation && "geolocation" in navigator && (
-              <button
-                onClick={detectAndSetLocation}
-                className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:shadow-md transition-all"
-              >
-                Detect My Location Automatically
-              </button>
+            {isDetectingLocation ? (
+              <div className="mb-4">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
+                <p className="text-gray-600">Detecting your location...</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-gray-600 mb-4">
+                  Please update your location in your profile to access {activeTab} chat
+                </p>
+                {locationError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{locationError}</p>
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                  {"geolocation" in navigator && (
+                    <button
+                      onClick={detectAndSetLocation}
+                      className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:shadow-md transition-all"
+                    >
+                      Detect My Location Automatically
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate("/profile")}
+                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all"
+                  >
+                    Set Location Manually in Profile
+                  </button>
+                </div>
+              </>
             )}
           </div>
         ) : (

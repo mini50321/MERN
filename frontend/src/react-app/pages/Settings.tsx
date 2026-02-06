@@ -267,6 +267,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [yearlyDiscountPercentage, setYearlyDiscountPercentage] = useState(17);
   const [plans, setPlans] = useState<any[]>([]);
+  const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSubscription();
@@ -279,7 +280,9 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
     try {
       const response = await fetch("/api/subscription");
       const data = await response.json();
-      setCurrentTier(data.tier);
+      const tier = data.tier || "mavy_lite";
+      const normalizedTier = tier === "free" ? "mavy_lite" : tier;
+      setCurrentTier(normalizedTier);
     } catch (error) {
       console.error("Error fetching subscription:", error);
     }
@@ -318,15 +321,34 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleUpgrade = async (tier: string, amount: number) => {
+    setIsUpgrading(tier);
     try {
-      await fetch("/api/subscription", {
+      const response = await fetch("/api/subscription", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier, amount, payment_method: "card" }),
       });
-      setCurrentTier(tier);
-    } catch (error) {
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to upgrade subscription");
+      }
+
+      if (data.success) {
+        const updatedTier = data.tier || tier;
+        const normalizedTier = updatedTier === "free" ? "mavy_lite" : updatedTier;
+        setCurrentTier(normalizedTier);
+        await fetchSubscription();
+        alert(`Successfully upgraded to ${getTierDisplayName(normalizedTier)}!`);
+      } else {
+        throw new Error("Upgrade failed");
+      }
+    } catch (error: any) {
       console.error("Error upgrading subscription:", error);
+      alert(error.message || "Failed to upgrade subscription. Please try again.");
+    } finally {
+      setIsUpgrading(null);
     }
   };
 
@@ -442,9 +464,22 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                   ) : (
                     <button
                       onClick={() => handleUpgrade(plan.tier, plan.price)}
-                      className="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:shadow-md"
+                      disabled={isUpgrading === plan.tier}
+                      className={`w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:shadow-md transition-all ${
+                        isUpgrading === plan.tier ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                     >
-                      {plan.price === 0 ? "Downgrade" : "Upgrade"}
+                      {isUpgrading === plan.tier ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : (
+                        plan.price === 0 ? "Downgrade" : "Upgrade"
+                      )}
                     </button>
                   )}
                 </div>

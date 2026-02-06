@@ -2545,28 +2545,28 @@ function SubscriptionManagementPanel({ plans, onReload, canEdit }: { plans: any[
     <div>
       {/* Yearly Discount Settings */}
       {canEdit && (
-        <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Yearly Subscription Discount</h3>
-              <p className="text-sm text-gray-600">Configure the discount percentage applied to yearly subscriptions</p>
+        <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">Yearly Subscription Discount</h3>
+              <p className="text-xs sm:text-sm text-gray-600">Configure the discount percentage applied to yearly subscriptions</p>
             </div>
             {!isEditingDiscount ? (
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-green-600">{yearlyDiscountPercentage}%</div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <div className="text-left sm:text-right">
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600">{yearlyDiscountPercentage}%</div>
                   <div className="text-xs text-gray-600">Current Discount</div>
                 </div>
                 <button
                   onClick={() => setIsEditingDiscount(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
                   <Edit className="w-4 h-4" />
                   Edit
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -2574,40 +2574,42 @@ function SubscriptionManagementPanel({ plans, onReload, canEdit }: { plans: any[
                     max="100"
                     value={tempDiscount}
                     onChange={(e) => setTempDiscount(parseInt(e.target.value) || 0)}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center font-semibold"
+                    className="w-20 sm:w-24 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center font-semibold text-sm sm:text-base"
                   />
-                  <span className="text-gray-600 font-medium">%</span>
+                  <span className="text-gray-600 font-medium text-sm sm:text-base">%</span>
                 </div>
-                <button
-                  onClick={() => {
-                    setIsEditingDiscount(false);
-                    setTempDiscount(yearlyDiscountPercentage);
-                  }}
-                  className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveDiscount}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  Save
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setIsEditingDiscount(false);
+                      setTempDiscount(yearlyDiscountPercentage);
+                    }}
+                    className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm sm:text-base"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveDiscount}
+                    className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
 
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Subscription Plans</h2>
+      <div className="mt-6 sm:mt-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Subscription Plans</h2>
         {plans.length === 0 ? (
-          <div className="bg-white rounded-lg p-8 text-center">
-            <p className="text-gray-600">No subscription plans found. Plans will appear here once they are created.</p>
+          <div className="bg-white rounded-lg p-6 sm:p-8 text-center">
+            <p className="text-sm sm:text-base text-gray-600">No subscription plans found. Plans will appear here once they are created.</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {plans.sort((a, b) => a.display_order - b.display_order).map((plan) => {
           const isFree = (plan.monthly_price || plan.price) === 0;
           const monthlyPrice = plan.monthly_price || plan.price || 0;
@@ -2616,7 +2618,7 @@ function SubscriptionManagementPanel({ plans, onReload, canEdit }: { plans: any[
           return (
             <div
               key={plan.id}
-              className={`border rounded-2xl p-6 ${
+              className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 transition-all hover:shadow-md ${
                 plan.tier_name.includes("mavy_max")
                   ? "border-purple-500 shadow-lg bg-gradient-to-br from-purple-50 to-white"
                   : plan.tier_name.includes("mavy_pro")
@@ -2624,65 +2626,65 @@ function SubscriptionManagementPanel({ plans, onReload, canEdit }: { plans: any[
                   : "border-gray-200 bg-white"
               }`}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold">{plan.tier_name.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</h3>
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="flex-1 min-w-0 pr-2">
+                  <h3 className="text-lg sm:text-xl font-bold truncate">{plan.tier_name.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</h3>
                   <div className="mt-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold">{plan.currency} {Number(monthlyPrice).toFixed(2)}</span>
-                      <span className="text-gray-600 text-sm">/month</span>
+                    <div className="flex flex-wrap items-baseline gap-1 sm:gap-2">
+                      <span className="text-xl sm:text-2xl font-bold">{plan.currency} {Number(monthlyPrice).toFixed(2)}</span>
+                      <span className="text-gray-600 text-xs sm:text-sm">/month</span>
                     </div>
                     {!isFree && (
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-lg font-semibold text-green-600">{plan.currency} {Number(yearlyPrice).toFixed(2)}</span>
+                      <div className="flex flex-wrap items-baseline gap-1 sm:gap-2 mt-1">
+                        <span className="text-base sm:text-lg font-semibold text-green-600">{plan.currency} {Number(yearlyPrice).toFixed(2)}</span>
                         <span className="text-gray-600 text-xs">/year</span>
-                        <span className="text-xs text-green-600 ml-1">
+                        <span className="text-xs text-green-600">
                           (Save {yearlyDiscountPercentage}%)
                         </span>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                   {canEdit && (
                     <>
                       <button
                         onClick={() => setEditingPlan(plan)}
-                        className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                        className="p-1.5 sm:p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
                         title="Edit Plan"
                       >
-                        <Edit className="w-4 h-4" />
+                        <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                       <button
                         onClick={() => handleToggleActive(plan.id, plan.is_active)}
-                        className={`p-2 rounded-lg ${
+                        className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           plan.is_active
                             ? "bg-green-100 text-green-600 hover:bg-green-200"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                         }`}
                         title={plan.is_active ? "Active" : "Inactive"}
                       >
-                        {plan.is_active ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                        {plan.is_active ? <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                       </button>
                     </>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm text-gray-700 mb-3">Benefits:</h4>
-                <ul className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
+                <h4 className="font-semibold text-xs sm:text-sm text-gray-700 mb-2 sm:mb-3">Benefits:</h4>
+                <ul className="space-y-1.5 sm:space-y-2">
                   {JSON.parse(plan.benefits || "[]").map((benefit: string, idx: number) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm">
-                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700">{benefit}</span>
+                    <li key={idx} className="flex items-start gap-1.5 sm:gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">{benefit}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="mt-6 pt-4 border-t">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t">
+                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
                   plan.is_active
                     ? "bg-green-100 text-green-800"
                     : "bg-gray-100 text-gray-800"

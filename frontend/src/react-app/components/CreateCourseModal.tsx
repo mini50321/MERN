@@ -48,6 +48,9 @@ export default function CreateCourseModal({
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      console.log(`Video file selected: ${file.name}, Size: ${fileSizeMB}MB`);
+      
       if (file.size > 100 * 1024 * 1024) {
         alert("Video file size must be less than 100MB. Please compress your video or use a smaller file.");
         return;
@@ -95,7 +98,9 @@ export default function CreateCourseModal({
     setUploadProgress("Uploading video...");
 
     try {
-      // Upload video
+      const fileSizeMB = (videoFile.size / (1024 * 1024)).toFixed(2);
+      console.log(`Uploading video: ${videoFile.name}, Size: ${fileSizeMB}MB`);
+      
       const videoFormData = new FormData();
       videoFormData.append("video", videoFile);
 
@@ -109,7 +114,7 @@ export default function CreateCourseModal({
         let errorMessage = "Failed to upload video";
         
         if (videoRes.status === 413) {
-          errorMessage = "Video file is too large for upload. Cloudflare has a request size limit. Please try a smaller file or contact support.";
+          errorMessage = `Video file (${fileSizeMB}MB) is being rejected by a proxy or server limit. This might be due to:\n\n1. Reverse proxy (nginx) body size limit\n2. Cloudflare proxy settings\n3. Server configuration\n\nPlease contact your server administrator to increase the request body size limit.`;
         } else {
           try {
             const errorData = await videoRes.json();
@@ -118,6 +123,13 @@ export default function CreateCourseModal({
             errorMessage = `Upload failed with status ${videoRes.status}. Please try again or contact support.`;
           }
         }
+        
+        console.error("Video upload error:", {
+          status: videoRes.status,
+          statusText: videoRes.statusText,
+          fileSize: `${fileSizeMB}MB`,
+          fileName: videoFile.name
+        });
         
         throw new Error(errorMessage);
       }

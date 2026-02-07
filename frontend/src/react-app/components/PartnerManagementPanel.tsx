@@ -514,7 +514,7 @@ export default function PartnerManagementPanel({ canEdit = true }: { canEdit?: b
                       (partner.subscription_tier || "mavy_lite") === "mavy_max" ? "bg-purple-100 text-purple-800" :
                       (partner.subscription_tier || "mavy_lite") === "mavy_pro" ? "bg-indigo-100 text-indigo-800" :
                       (partner.subscription_tier || "mavy_lite") === "mavy_plus" ? "bg-blue-100 text-blue-800" :
-                      "bg-gray-100 text-gray-800"
+                    "bg-gray-100 text-gray-800"
                     }`}
                     title="Click to edit subscription"
                   >

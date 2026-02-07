@@ -213,12 +213,12 @@ router.get('/ratings', authMiddleware, async (req: AuthRequest, res: Response) =
         .lean();
       } else {
         ratings = await ServiceOrder.find({
-          assigned_engineer_id: userId,
-          status: 'completed',
-          partner_rating: { $exists: true, $ne: null }
-        })
-        .sort({ created_at: -1 })
-        .lean();
+        assigned_engineer_id: userId,
+        status: 'completed',
+        partner_rating: { $exists: true, $ne: null }
+      })
+      .sort({ created_at: -1 })
+      .lean();
       }
       
       const formattedRatings = (ratings || []).map((order: any) => {

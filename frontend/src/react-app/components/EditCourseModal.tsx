@@ -125,14 +125,22 @@ export default function EditCourseModal({
 
         const videoRes = await fetch("/api/courses/upload-video", {
           method: "POST",
+          credentials: "include",
           body: videoFormData,
         });
 
         if (!videoRes.ok) {
-          throw new Error("Failed to upload video");
+          const errorData = await videoRes.json().catch(() => ({ error: "Failed to upload video" }));
+          const errorMessage = errorData.details || errorData.error || "Failed to upload video";
+          throw new Error(errorMessage);
         }
 
         const videoData = await videoRes.json();
+        
+        if (!videoData.video_url) {
+          throw new Error("Video upload succeeded but no video URL was returned");
+        }
+        
         videoUrl = videoData.video_url;
       }
 

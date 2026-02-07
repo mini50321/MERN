@@ -48,8 +48,8 @@ export default function CreateCourseModal({
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.size > 20 * 1024 * 1024) {
-        alert("Video file size must be less than 20MB. Please compress your video or use a smaller file.");
+      if (file.size > 100 * 1024 * 1024) {
+        alert("Video file size must be less than 100MB. Please compress your video or use a smaller file.");
         return;
       }
       setVideoFile(file);
@@ -106,10 +106,16 @@ export default function CreateCourseModal({
       });
 
       if (!videoRes.ok) {
-        throw new Error("Failed to upload video");
+        const errorData = await videoRes.json().catch(() => ({ error: "Failed to upload video" }));
+        const errorMessage = errorData.details || errorData.error || "Failed to upload video";
+        throw new Error(errorMessage);
       }
 
       const videoData = await videoRes.json();
+      
+      if (!videoData.video_url) {
+        throw new Error("Video upload succeeded but no video URL was returned");
+      }
 
       // Upload course image if provided
       let imageUrl = null;
@@ -443,7 +449,7 @@ export default function CreateCourseModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Course Video * (Max 20MB)
+                  Course Video * (Max 100MB)
                 </label>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">

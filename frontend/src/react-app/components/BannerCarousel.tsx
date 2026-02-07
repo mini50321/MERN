@@ -233,25 +233,25 @@ export default function BannerCarousel() {
             </div>
           ) : (
             <>
-              {currentItem.type === "image" ? (
-                <img
-                  src={currentItem.url}
-                  alt="Banner"
-                  className="w-full h-full object-cover"
+          {currentItem.type === "image" ? (
+            <img
+              src={currentItem.url}
+              alt="Banner"
+              className="w-full h-full object-cover"
                   onError={handleImageError}
                   onLoad={handleImageLoad}
-                />
-              ) : (
-                <video
-                  ref={videoRef}
-                  src={currentItem.url}
-                  className="w-full h-full object-cover"
-                  onEnded={handleVideoEnded}
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              src={currentItem.url}
+              className="w-full h-full object-cover"
+              onEnded={handleVideoEnded}
                   onError={handleVideoError}
                   onLoadedData={handleVideoLoad}
-                  playsInline
-                  muted
-                />
+              playsInline
+              muted
+            />
               )}
             </>
           )}

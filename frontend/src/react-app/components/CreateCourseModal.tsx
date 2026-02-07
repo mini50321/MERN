@@ -106,8 +106,19 @@ export default function CreateCourseModal({
       });
 
       if (!videoRes.ok) {
-        const errorData = await videoRes.json().catch(() => ({ error: "Failed to upload video" }));
-        const errorMessage = errorData.details || errorData.error || "Failed to upload video";
+        let errorMessage = "Failed to upload video";
+        
+        if (videoRes.status === 413) {
+          errorMessage = "Video file is too large for upload. Cloudflare has a request size limit. Please try a smaller file or contact support.";
+        } else {
+          try {
+            const errorData = await videoRes.json();
+            errorMessage = errorData.details || errorData.error || errorMessage;
+          } catch {
+            errorMessage = `Upload failed with status ${videoRes.status}. Please try again or contact support.`;
+          }
+        }
+        
         throw new Error(errorMessage);
       }
 

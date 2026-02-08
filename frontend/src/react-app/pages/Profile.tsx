@@ -1394,18 +1394,38 @@ export default function Profile() {
                         ).toFixed(1)}
                       </span>
                       <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-6 h-6 ${
-                              star <= Math.round(ratings.length > 0 
-                                ? averageRating 
-                                : ((user as any)?.profile?.rating_stats?.average_rating || 0))
-                                ? "fill-yellow-400 text-yellow-400" 
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const rating = ratings.length > 0 
+                            ? averageRating 
+                            : ((user as any)?.profile?.rating_stats?.average_rating || 0);
+                          const fullStars = Math.floor(rating);
+                          const hasHalfStar = rating % 1 >= 0.5;
+                          
+                          if (star <= fullStars) {
+                            return (
+                              <Star
+                                key={star}
+                                className="w-6 h-6 fill-yellow-400 text-yellow-400"
+                              />
+                            );
+                          } else if (star === fullStars + 1 && hasHalfStar) {
+                            return (
+                              <div key={star} className="relative w-6 h-6">
+                                <Star className="w-6 h-6 text-gray-300 absolute" />
+                                <div className="absolute overflow-hidden" style={{ width: '50%' }}>
+                                  <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <Star
+                                key={star}
+                                className="w-6 h-6 text-gray-300"
+                              />
+                            );
+                          }
+                        })}
                       </div>
                     </div>
                   </div>

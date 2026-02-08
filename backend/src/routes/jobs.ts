@@ -187,6 +187,96 @@ router.post('/:id/apply', authMiddleware, async (req: AuthRequest, res: Response
       return res.status(404).json({ error: 'Job not found' });
     }
 
+    if (!job.contact_email) {
+      return res.status(400).json({ error: 'Job contact email not found' });
+    }
+
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userName = String(user.full_name || user.email || 'A user');
+    const userEmail = String(user.email || user.patient_email || 'Not provided');
+    const phone = String(user.phone ? (user.country_code ? `${user.country_code} ${user.phone}` : user.phone) : 'Not provided');
+    const state = String(user.state || 'Not specified');
+    const country = String(user.country || 'Not specified');
+    
+    let experienceText = 'Not specified';
+    if (user.experience) {
+      experienceText = String(user.experience);
+    }
+    
+    let qualificationText = 'Not specified';
+    if (user.education) {
+      qualificationText = String(user.education);
+    }
+    
+    const resumeUrl = user.resume_url 
+      ? `https://themavy.com/api/uploads/profile/${user.resume_url}` 
+      : null;
+
+    const emailText = `Hi,
+
+A user from MavyTech has applied for the job "${job.title}".
+
+**Applicant Details:**
+- Name: ${userName}
+- Email: ${userEmail}
+- Phone: ${phone}
+- Country: ${country}
+- State: ${state}
+- Experience: ${experienceText}
+- Qualification: ${qualificationText}
+${resumeUrl ? `Resume: ${resumeUrl}` : ''}
+
+Regards,
+MavyTech`;
+
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
+        <p>Hi,</p>
+        <p>A user from MavyTech has applied for the job "<strong>${job.title}</strong>".</p>
+        <p><strong>Applicant Details:</strong></p>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>- Name: ${userName}</li>
+          <li>- Email: ${userEmail}</li>
+          <li>- Phone: ${phone}</li>
+          <li>- Country: ${country}</li>
+          <li>- State: ${state}</li>
+          <li>- Experience: ${experienceText}</li>
+          <li>- Qualification: ${qualificationText}</li>
+          ${resumeUrl ? `<li>Resume: <a href="${resumeUrl}">${resumeUrl}</a></li>` : ''}
+        </ul>
+        <p>Regards,<br>MavyTech</p>
+      </div>
+    `;
+
+    try {
+      const resendApiKey = process.env.RESEND_API_KEY;
+      if (resendApiKey) {
+        const { Resend } = await import('resend');
+        const resend = new Resend(resendApiKey);
+
+        await resend.emails.send({
+          from: 'careers@themavy.com',
+          replyTo: userEmail,
+          to: job.contact_email,
+          subject: `Job Application: ${job.title}`,
+          text: emailText,
+          html: emailHtml,
+        });
+      } else {
+        console.log('RESEND_API_KEY not found. Email would be sent:', {
+          from: 'careers@themavy.com',
+          to: job.contact_email,
+          subject: `Job Application: ${job.title}`,
+        });
+      }
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+    }
+
     return res.json({ success: true });
   } catch (error) {
     console.error('Apply to job error:', error);

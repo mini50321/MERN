@@ -2100,187 +2100,100 @@ app.post("/api/jobs/:id/apply", authMiddleware, async (c) => {
 
     const resend = new Resend(c.env.RESEND_API_KEY);
 
-    // Prepare email content with complete profile details
     const userName = String(profile.full_name || user!.google_user_data.name || "A user");
-    const userEmail = String(user!.google_user_data.email || "Not provided");
-    const phone = String(profile.phone || "Not provided");
+    const userEmail = String(user!.google_user_data.email || profile.email || profile.patient_email || "Not provided");
+    const phone = String(profile.phone ? (profile.country_code ? `${profile.country_code} ${profile.phone}` : profile.phone) : "Not provided");
     const state = String(profile.state || "Not specified");
     const country = String(profile.country || "Not specified");
-    const city = String(profile.city || "");
-    const locationString = city ? `${city}, ${state}, ${country}` : `${state}, ${country}`;
-    const bio = String(profile.bio || "Not provided");
-    const experience = String(profile.experience || "Not specified");
-    const education = String(profile.education || "Not specified");
+    
+    let experienceText = "Not specified";
+    if (profile.experience) {
+      try {
+        const experienceJson = profile.experience_json ? JSON.parse(profile.experience_json as string) : null;
+        if (experienceJson && Array.isArray(experienceJson) && experienceJson.length > 0) {
+          const exp = experienceJson[0];
+          const company = exp.company || exp.organization || "";
+          const position = exp.position || exp.title || exp.role || "";
+          const duration = exp.duration || exp.months || "";
+          experienceText = `${position}${company ? ` at ${company}` : ""}${duration ? ` for (${duration} months)` : ""}`;
+        } else {
+          experienceText = String(profile.experience);
+        }
+      } catch {
+        experienceText = String(profile.experience);
+      }
+    }
+    
+    let qualificationText = "Not specified";
+    if (profile.education) {
+      try {
+        const educationJson = profile.education_json ? JSON.parse(profile.education_json as string) : null;
+        if (educationJson && Array.isArray(educationJson) && educationJson.length > 0) {
+          const edu = educationJson[0];
+          const degree = edu.degree || edu.qualification || "";
+          const institution = edu.institution || edu.university || edu.school || "";
+          const field = edu.field || edu.major || "";
+          qualificationText = `${degree}${institution ? ` from ${institution}` : ""}${field ? ` in (${field})` : ""}`;
+        } else {
+          qualificationText = String(profile.education);
+        }
+      } catch {
+        qualificationText = String(profile.education);
+      }
+    }
+    
+    const resumeUrl = profile.resume_url 
+      ? `https://themavy.com/api/uploads/profile/${profile.resume_url}` 
+      : null;
 
-    let emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; background-color: #ffffff;">
-        <!-- Header -->
-        <div style="background: linear-gradient(to right, #2563eb, #4f46e5); padding: 30px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px;">New Job Application</h1>
-          <p style="color: #e0e7ff; margin: 10px 0 0 0;">Mavy Partner - Professional Hub for Biomedical Engineers</p>
-        </div>
-        
-        <!-- Job Info -->
-        <div style="padding: 30px; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-          <p style="font-size: 16px; color: #374151; margin: 0;">
-            <strong>${userName}</strong> has applied for the following position at your organization:
-          </p>
-          <h2 style="color: #1f2937; margin: 10px 0 0 0; font-size: 24px;">${job.title}</h2>
-          <div style="margin-top: 15px; padding: 15px; background-color: #dbeafe; border-radius: 8px; border-left: 4px solid #2563eb;">
-            <p style="color: #1e40af; margin: 0; font-weight: 600;">
-              📋 Please review the applicant's details below and contact them directly to proceed with the recruitment process.
-            </p>
-          </div>
-        </div>
-        
-        <!-- Applicant Details -->
-        <div style="padding: 30px;">
-          <h3 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
-            Applicant Information
-          </h3>
-          
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; width: 180px;">
-                <strong style="color: #374151;">Full Name:</strong>
-              </td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937;">
-                ${userName}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
-                <strong style="color: #374151;">Email:</strong>
-              </td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
-                <a href="mailto:${userEmail}" style="color: #2563eb; text-decoration: none;">${userEmail}</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
-                <strong style="color: #374151;">Contact Number:</strong>
-              </td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
-                <a href="tel:${phone}" style="color: #2563eb; text-decoration: none;">${phone}</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
-                <strong style="color: #374151;">Location:</strong>
-              </td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937;">
-                ${locationString}
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
-                <strong style="color: #374151;">State:</strong>
-              </td>
-              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937;">
-                ${state}
-              </td>
-            </tr>
-          </table>
-          
-          <!-- Bio Section -->
-          ${bio !== "Not provided" ? `
-          <div style="margin-top: 30px;">
-            <h4 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">Professional Bio</h4>
-            <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #2563eb;">
-              <p style="color: #374151; margin: 0; line-height: 1.6; white-space: pre-wrap;">${bio}</p>
-            </div>
-          </div>
-          ` : ''}
-          
-          <!-- Work Experience Section -->
-          <div style="margin-top: 30px;">
-            <h4 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">Work Experience</h4>
-            <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
-              <p style="color: #374151; margin: 0; line-height: 1.6; white-space: pre-wrap;">${experience}</p>
-            </div>
-          </div>
-          
-          <!-- Education Section -->
-          <div style="margin-top: 30px;">
-            <h4 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px;">Education</h4>
-            <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #8b5cf6;">
-              <p style="color: #374151; margin: 0; line-height: 1.6; white-space: pre-wrap;">${education}</p>
-            </div>
-          </div>
-          
-          <!-- Resume Attachment Notice -->
-          ${profile.resume_url ? `
-          <div style="margin-top: 30px; background-color: #ecfdf5; border: 1px solid #10b981; padding: 15px; border-radius: 8px;">
-            <p style="color: #047857; margin: 0; display: flex; align-items: center;">
-              <span style="font-size: 20px; margin-right: 10px;">📎</span>
-              <strong>The applicant's resume is attached to this email.</strong>
-            </p>
-          </div>
-          ` : `
-          <div style="margin-top: 30px; background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px;">
-            <p style="color: #92400e; margin: 0; display: flex; align-items: center;">
-              <span style="font-size: 20px; margin-right: 10px;">⚠️</span>
-              <strong>No resume was provided by the applicant.</strong>
-            </p>
-          </div>
-          `}
-        </div>
-        
-        <!-- Call to Action -->
-        <div style="padding: 20px 30px; background-color: #ecfdf5; border-top: 2px solid #10b981;">
-          <p style="color: #047857; font-size: 15px; margin: 0; font-weight: 600;">
-            ✉️ Next Steps:
-          </p>
-          <p style="color: #065f46; font-size: 14px; margin: 10px 0 0 0; line-height: 1.6;">
-            Please contact <strong>${userName}</strong> directly at <a href="mailto:${userEmail}" style="color: #2563eb;">${userEmail}</a> 
-            ${phone !== "Not provided" ? `or call <a href="tel:${phone}" style="color: #2563eb;">${phone}</a>` : ""} 
-            to proceed with the official recruitment process.
-          </p>
-        </div>
-        
-        <!-- Footer -->
-        <div style="background-color: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6;">
-            This application was sent through <strong>Mavy Partner</strong>, the professional hub for biomedical engineers and healthcare technology professionals.
-          </p>
-          <p style="color: #6b7280; font-size: 12px; margin: 10px 0 0 0;">
-            For support or questions, contact us at 
-            <a href="mailto:mavytechsolutions@gmail.com" style="color: #2563eb; text-decoration: none;">mavytechsolutions@gmail.com</a>
-          </p>
-          <p style="color: #9ca3af; font-size: 11px; margin: 10px 0 0 0;">
-            You can reply directly to this email to contact the applicant at ${userEmail}
-          </p>
-        </div>
+    const emailText = `Hi,
+
+A user from MavyTech has applied for the job "${job.title}".
+
+**Applicant Details:**
+- Name: ${userName}
+- Email: ${userEmail}
+- Phone: ${phone}
+- Country: ${country}
+- State: ${state}
+- Experience: ${experienceText}
+- Qualification: ${qualificationText}
+${resumeUrl ? `Resume: ${resumeUrl}` : ""}
+
+Regards,
+MavyTech`;
+
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
+        <p>Hi,</p>
+        <p>A user from MavyTech has applied for the job "<strong>${job.title}</strong>".</p>
+        <p><strong>Applicant Details:</strong></p>
+        <ul style="list-style: none; padding-left: 0;">
+          <li>- Name: ${userName}</li>
+          <li>- Email: ${userEmail}</li>
+          <li>- Phone: ${phone}</li>
+          <li>- Country: ${country}</li>
+          <li>- State: ${state}</li>
+          <li>- Experience: ${experienceText}</li>
+          <li>- Qualification: ${qualificationText}</li>
+          ${resumeUrl ? `<li>Resume: <a href="${resumeUrl}">${resumeUrl}</a></li>` : ""}
+        </ul>
+        <p>Regards,<br>MavyTech</p>
       </div>
     `;
 
+    if (!job.contact_email) {
+      return c.json({ error: "Job contact email not found" }, 400);
+    }
+
     const emailData: any = {
-      from: "Mavy Careers <careers@themavy.com>",
+      from: "careers@themavy.com",
       replyTo: userEmail,
       to: job.contact_email as string,
-      subject: `Job Application: ${job.title} - ${userName}`,
+      subject: `Job Application: ${job.title}`,
+      text: emailText,
       html: emailHtml,
     };
-
-    // Attach resume if available
-    if (profile.resume_url) {
-      try {
-        const resumeObject = await c.env.R2_BUCKET.get(profile.resume_url as string);
-        if (resumeObject) {
-          const resumeBuffer = await resumeObject.arrayBuffer();
-          const resumeBase64 = btoa(String.fromCharCode(...new Uint8Array(resumeBuffer)));
-          
-          emailData.attachments = [
-            {
-              filename: `${userName.replace(/\s+/g, '_')}_Resume.pdf`,
-              content: resumeBase64,
-            },
-          ];
-        }
-      } catch (error) {
-        console.error("Error fetching resume:", error);
-      }
-    }
 
     await resend.emails.send(emailData);
 

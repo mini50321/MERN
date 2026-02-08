@@ -290,7 +290,12 @@ MavyTech`;
       console.error('❌ Error sending email:', emailError);
     }
 
-    return res.json({ success: true });
+    return res.json({ 
+      success: true,
+      message: 'Application sent successfully',
+      employerEmail: job.contact_email,
+      jobTitle: job.title
+    });
   } catch (error) {
     console.error('Apply to job error:', error);
     return res.status(500).json({ error: 'Failed to submit application' });

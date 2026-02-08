@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { Job } from "@/shared/types";
 import JobApplicationModal from "@/react-app/components/JobApplicationModal";
+import JobApplicationSuccessModal from "@/react-app/components/JobApplicationSuccessModal";
 import CreateJobModal from "@/react-app/components/CreateJobModal";
 import EditJobModal from "@/react-app/components/EditJobModal";
 import DeleteConfirmModal from "@/react-app/components/DeleteConfirmModal";
@@ -48,6 +49,8 @@ export default function Jobs() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showMenuForJob, setShowMenuForJob] = useState<number | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successData, setSuccessData] = useState<{ jobTitle: string; employerEmail: string } | null>(null);
   const menuRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   /* =========================
@@ -136,11 +139,29 @@ export default function Jobs() {
         method: "POST",
         credentials: "include"
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Application failed");
+      }
+      const data = await res.json();
       setApplied(new Set([...applied, selectedJob.id]));
       setSelectedJob(null);
-    } catch {
-      alert("Application failed");
+      
+      if (data.employerEmail) {
+        setSuccessData({
+          jobTitle: data.jobTitle || selectedJob.title,
+          employerEmail: data.employerEmail
+        });
+        setShowSuccessModal(true);
+      } else {
+        setSuccessData({
+          jobTitle: selectedJob.title,
+          employerEmail: "Not specified"
+        });
+        setShowSuccessModal(true);
+      }
+    } catch (error: any) {
+      alert(error.message || "Application failed");
     } finally {
       setApplyingId(null);
     }
@@ -415,6 +436,19 @@ export default function Jobs() {
         hasResume={hasResume}
         isApplying={applyingId === selectedJob?.id}
       />
+
+      {/* Success Modal */}
+      {successData && (
+        <JobApplicationSuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => {
+            setShowSuccessModal(false);
+            setSuccessData(null);
+          }}
+          jobTitle={successData.jobTitle}
+          employerEmail={successData.employerEmail}
+        />
+      )}
 
       {/* Edit Job Modal */}
       {editingJob && (

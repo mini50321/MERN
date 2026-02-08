@@ -191,6 +191,8 @@ router.post('/:id/apply', authMiddleware, async (req: AuthRequest, res: Response
       return res.status(400).json({ error: 'Job contact email not found' });
     }
 
+    console.log(`[Job Application] Job: "${job.title}" | Employer Email: ${job.contact_email}`);
+
     const user = await User.findOne({ user_id: req.user!.user_id });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -258,7 +260,11 @@ MavyTech`;
         const { Resend } = await import('resend');
         const resend = new Resend(resendApiKey);
 
-        await resend.emails.send({
+        console.log(`[Job Application] Sending email to: ${job.contact_email}`);
+        console.log(`[Job Application] From: careers@themavy.com`);
+        console.log(`[Job Application] Applicant: ${userName} (${userEmail})`);
+
+        const emailResult = await resend.emails.send({
           from: 'careers@themavy.com',
           replyTo: userEmail,
           to: job.contact_email,
@@ -266,15 +272,18 @@ MavyTech`;
           text: emailText,
           html: emailHtml,
         });
+
+        console.log(`[Job Application] ✅ Email sent successfully! Email ID: ${emailResult.id || 'N/A'}`);
+        console.log(`[Job Application] 📧 Email destination: ${job.contact_email}`);
       } else {
-        console.log('RESEND_API_KEY not found. Email would be sent:', {
+        console.log('❌ RESEND_API_KEY not found. Email would be sent:', {
           from: 'careers@themavy.com',
           to: job.contact_email,
           subject: `Job Application: ${job.title}`,
         });
       }
     } catch (emailError) {
-      console.error('Error sending email:', emailError);
+      console.error('❌ Error sending email:', emailError);
     }
 
     return res.json({ success: true });

@@ -1152,29 +1152,6 @@ function BookingsTab() {
               </div>
             )}
 
-            {/* Rating Already Submitted */}
-            {booking.status === "completed" && booking.partner_rating && (
-              <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-sm font-semibold text-gray-900 mb-2">Your Rating</p>
-                <div className="flex items-center gap-2 mb-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`w-5 h-5 ${
-                        star <= booking.partner_rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-                      }`}
-                    />
-                  ))}
-                  <span className="text-sm font-semibold text-gray-700">
-                    ({booking.partner_rating}/5)
-                  </span>
-                </div>
-                {booking.partner_review && (
-                  <p className="text-sm text-gray-700 italic">"{booking.partner_review}"</p>
-                )}
-              </div>
-            )}
-
             {/* Partner's Review of Patient */}
             {booking.status === "completed" && booking.user_rating && (
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">

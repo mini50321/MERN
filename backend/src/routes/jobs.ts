@@ -273,7 +273,11 @@ MavyTech`;
           html: emailHtml,
         });
 
-        console.log(`[Job Application] ✅ Email sent successfully! Email ID: ${emailResult.id || 'N/A'}`);
+        if (emailResult.data) {
+          console.log(`[Job Application] ✅ Email sent successfully! Email ID: ${emailResult.data.id || 'N/A'}`);
+        } else {
+          console.log(`[Job Application] ✅ Email sent successfully!`);
+        }
         console.log(`[Job Application] 📧 Email destination: ${job.contact_email}`);
       } else {
         console.log('❌ RESEND_API_KEY not found. Email would be sent:', {

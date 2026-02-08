@@ -1175,6 +1175,29 @@ function BookingsTab() {
               </div>
             )}
 
+            {/* Partner's Review of Patient */}
+            {booking.status === "completed" && booking.user_rating && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-semibold text-gray-900 mb-2">Partner's Review</p>
+                <div className="flex items-center gap-2 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-5 h-5 ${
+                        star <= booking.user_rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                      }`}
+                    />
+                  ))}
+                  <span className="text-sm font-semibold text-gray-700">
+                    ({booking.user_rating}/5)
+                  </span>
+                </div>
+                {booking.user_review && (
+                  <p className="text-sm text-gray-700 italic">"{booking.user_review}"</p>
+                )}
+              </div>
+            )}
+
             {/* Preferred Schedule */}
             {(booking.preferred_date || booking.preferred_time) && (
               <div className="flex items-center gap-4 text-sm text-gray-600">

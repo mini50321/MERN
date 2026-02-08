@@ -274,11 +274,17 @@ MavyTech`;
         });
 
         if (emailResult.data) {
-          console.log(`[Job Application] ✅ Email sent successfully! Email ID: ${emailResult.data.id || 'N/A'}`);
+          console.log(`[Job Application] ✅ Email sent successfully!`);
+          console.log(`[Job Application] 📧 Email ID: ${emailResult.data.id || 'N/A'}`);
+          console.log(`[Job Application] 📧 Email destination: ${job.contact_email}`);
+          console.log(`[Job Application] 📧 Subject: Job Application: ${job.title}`);
+          console.log(`[Job Application] 📧 Track email at: https://resend.com/emails/${emailResult.data.id || ''}`);
+        } else if (emailResult.error) {
+          console.error(`[Job Application] ❌ Email send failed:`, emailResult.error);
         } else {
           console.log(`[Job Application] ✅ Email sent successfully!`);
+          console.log(`[Job Application] 📧 Email destination: ${job.contact_email}`);
         }
-        console.log(`[Job Application] 📧 Email destination: ${job.contact_email}`);
       } else {
         console.log('❌ RESEND_API_KEY not found. Email would be sent:', {
           from: 'careers@themavy.com',

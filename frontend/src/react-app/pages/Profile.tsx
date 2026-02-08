@@ -1399,7 +1399,7 @@ export default function Profile() {
                             ? averageRating 
                             : ((user as any)?.profile?.rating_stats?.average_rating || 0);
                           const fullStars = Math.floor(rating);
-                          const hasHalfStar = rating % 1 >= 0.5;
+                          const decimalPart = rating % 1;
                           
                           if (star <= fullStars) {
                             return (
@@ -1408,11 +1408,15 @@ export default function Profile() {
                                 className="w-6 h-6 fill-yellow-400 text-yellow-400"
                               />
                             );
-                          } else if (star === fullStars + 1 && hasHalfStar) {
+                          } else if (star === fullStars + 1 && decimalPart > 0) {
+                            const fillPercentage = decimalPart * 100;
                             return (
                               <div key={star} className="relative w-6 h-6">
-                                <Star className="w-6 h-6 text-gray-300 absolute" />
-                                <div className="absolute overflow-hidden" style={{ width: '50%' }}>
+                                <Star className="w-6 h-6 text-gray-300" />
+                                <div 
+                                  className="absolute top-0 left-0 overflow-hidden" 
+                                  style={{ width: `${fillPercentage}%` }}
+                                >
                                   <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
                                 </div>
                               </div>

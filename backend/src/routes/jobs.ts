@@ -260,12 +260,15 @@ MavyTech`;
         const { Resend } = await import('resend');
         const resend = new Resend(resendApiKey);
 
+        const senderEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+        const senderName = process.env.RESEND_FROM_NAME || 'MavyTech Careers';
+
         console.log(`[Job Application] Sending email to: ${job.contact_email}`);
-        console.log(`[Job Application] From: careers@themavy.com`);
+        console.log(`[Job Application] From: ${senderEmail}`);
         console.log(`[Job Application] Applicant: ${userName} (${userEmail})`);
 
         const emailResult = await resend.emails.send({
-          from: 'careers@themavy.com',
+          from: `${senderName} <${senderEmail}>`,
           replyTo: userEmail,
           to: job.contact_email,
           subject: `Job Application: ${job.title}`,
@@ -286,8 +289,9 @@ MavyTech`;
           console.log(`[Job Application] 📧 Email destination: ${job.contact_email}`);
         }
       } else {
+        const senderEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
         console.log('❌ RESEND_API_KEY not found. Email would be sent:', {
-          from: 'careers@themavy.com',
+          from: senderEmail,
           to: job.contact_email,
           subject: `Job Application: ${job.title}`,
         });

@@ -67,46 +67,53 @@ export async function verifyOTP(
 ): Promise<{ valid: boolean; message: string }> {
   try {
     console.log(`[OTP Verify] Attempting to verify OTP for ${phoneNumber}`);
+    console.log(`[OTP Verify] OTP received: ${otp}`);
     
+    const normalizedPhone = phoneNumber.trim();
+    const normalizedOtp = otp.trim();
     
     const otpRecord = await OTP.findOne({
-      phone_number: phoneNumber,
+      phone_number: normalizedPhone,
       verified: false
     }).sort({ created_at: -1 });
 
     if (!otpRecord) {
-      console.log(`[OTP Verify] No unverified OTP found for ${phoneNumber}`);
+      console.log(`[OTP Verify] No unverified OTP found for ${normalizedPhone}`);
+      const allRecords = await OTP.find({ phone_number: normalizedPhone }).sort({ created_at: -1 }).limit(5);
+      console.log(`[OTP Verify] Found ${allRecords.length} total OTP records for this phone (including verified)`);
+      if (allRecords.length > 0) {
+        console.log(`[OTP Verify] Most recent record: phone=${allRecords[0].phone_number}, verified=${allRecords[0].verified}, created=${allRecords[0].created_at}`);
+      }
       return {
         valid: false,
         message: "Invalid OTP code. Please request a new OTP.",
       };
     }
 
-    console.log(`[OTP Verify] Found OTP record. Expected: ${otpRecord.otp}, Received: ${otp}`);
+    console.log(`[OTP Verify] Found OTP record. Expected: "${otpRecord.otp}", Received: "${normalizedOtp}"`);
+    console.log(`[OTP Verify] OTP match: ${otpRecord.otp === normalizedOtp}`);
+    console.log(`[OTP Verify] OTP expires at: ${otpRecord.expires_at}, Current time: ${new Date()}`);
 
-    
-    if (otpRecord.otp !== otp) {
-      console.log(`[OTP Verify] OTP mismatch for ${phoneNumber}`);
+    if (otpRecord.otp !== normalizedOtp) {
+      console.log(`[OTP Verify] OTP mismatch for ${normalizedPhone}`);
       return {
         valid: false,
         message: "Invalid OTP code",
       };
     }
 
-   
     if (otpRecord.expires_at < new Date()) {
-      console.log(`[OTP Verify] OTP expired for ${phoneNumber}. Expires: ${otpRecord.expires_at}, Now: ${new Date()}`);
+      console.log(`[OTP Verify] OTP expired for ${normalizedPhone}. Expires: ${otpRecord.expires_at}, Now: ${new Date()}`);
       return {
         valid: false,
         message: "OTP has expired. Please request a new OTP.",
       };
     }
 
-    
     otpRecord.verified = true;
     await otpRecord.save();
 
-    console.log(`[OTP Verify] Successfully verified OTP for ${phoneNumber}`);
+    console.log(`[OTP Verify] Successfully verified OTP for ${normalizedPhone}`);
     return {
       valid: true,
       message: "OTP verified successfully",

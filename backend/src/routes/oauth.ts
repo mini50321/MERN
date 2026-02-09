@@ -82,16 +82,16 @@ router.get('/google/test-connectivity', async (_req: Request, res: Response) => 
 router.get('/google/redirect_url', async (_req: Request, res: Response) => {
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
+    const redirectUri = process.env.OAUTH_REDIRECT_URI || process.env.CORS_ORIGIN 
+      ? `${process.env.CORS_ORIGIN}/auth/callback` 
+      : 'https://themavy.com/auth/callback';
     
     if (!clientId) {
       return res.status(500).json({ 
         error: 'Google OAuth is not configured. Please set GOOGLE_CLIENT_ID in your environment variables.',
-        redirectUrl: `${frontendUrl}/auth/callback`
+        redirectUrl: redirectUri
       });
     }
-    
-    const redirectUri = `${frontendUrl}/auth/callback`;
     const scope = 'openid email profile';
     const responseType = 'code';
     const accessType = 'offline';
@@ -131,7 +131,6 @@ router.get('/google/redirect', async (_req: Request, res: Response) => {
 router.post('/google/callback', async (req: Request, res: Response) => {
   try {
     const { code } = req.body;
-    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
     
     if (!code) {
       return res.status(400).json({ error: 'No authorization code provided' });
@@ -146,7 +145,9 @@ router.post('/google/callback', async (req: Request, res: Response) => {
       });
     }
 
-    const redirectUri = `${frontendUrl}/auth/callback`;
+    const redirectUri = process.env.OAUTH_REDIRECT_URI || process.env.CORS_ORIGIN 
+      ? `${process.env.CORS_ORIGIN}/auth/callback` 
+      : 'https://themavy.com/auth/callback';
     
     console.log('OAuth Debug:', {
       clientId: clientId?.substring(0, 20) + '...',

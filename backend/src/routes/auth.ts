@@ -93,4 +93,37 @@ router.post('/otp/verify', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/otp/verify-phone', async (req: Request, res: Response) => {
+  try {
+    const { phone_number, otp } = req.body;
+
+    if (!phone_number || !otp) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Phone number and OTP are required' 
+      });
+    }
+
+    const result = await verifyOTP(phone_number, otp);
+
+    if (result.valid) {
+      return res.json({ 
+        success: true, 
+        message: 'Phone number verified successfully' 
+      });
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: result.message 
+      });
+    }
+  } catch (error) {
+    console.error('Verify phone OTP error:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to verify OTP. Please try again.' 
+    });
+  }
+});
+
 export default router;

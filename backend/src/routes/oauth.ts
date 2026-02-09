@@ -152,8 +152,7 @@ router.post('/google/callback', async (req: Request, res: Response) => {
     console.log('OAuth Debug:', {
       clientId: clientId?.substring(0, 20) + '...',
       clientSecret: clientSecret?.substring(0, 15) + '...',
-      redirectUri,
-      frontendUrl
+      redirectUri
     });
     
     try {

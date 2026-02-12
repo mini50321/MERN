@@ -1720,9 +1720,11 @@ router.delete('/content/:id', authMiddleware, async (req: AuthRequest, res: Resp
 
 router.get('/dynamic-pricing/night-duty', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
+    const setting = await AppSetting.findOne({ setting_key: 'night_duty_percentage' });
+    
     return res.json({
       enabled: true,
-      percentage: 20,
+      percentage: setting ? parseInt(setting.setting_value) : 20,
       start_time: '22:00',
       end_time: '06:00'
     });
@@ -1732,8 +1734,36 @@ router.get('/dynamic-pricing/night-duty', authMiddleware, async (_req: AuthReque
   }
 });
 
-router.put('/dynamic-pricing/night-duty', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.put('/dynamic-pricing/night-duty', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = user.role === 'super_admin' || 
+                        user.email === 'mavytechsolutions@gmail.com' || 
+                        user.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can update dynamic pricing' });
+    }
+    
+    const { percentage } = req.body;
+    
+    if (percentage === undefined || percentage < 0 || percentage > 100) {
+      return res.status(400).json({ error: 'Percentage must be between 0 and 100' });
+    }
+    
+    await AppSetting.findOneAndUpdate(
+      { setting_key: 'night_duty_percentage' },
+      { 
+        setting_key: 'night_duty_percentage',
+        setting_value: percentage.toString()
+      },
+      { upsert: true, new: true }
+    );
+    
     return res.json({ success: true });
   } catch (error) {
     console.error('Update night duty pricing error:', error);
@@ -1743,9 +1773,11 @@ router.put('/dynamic-pricing/night-duty', authMiddleware, async (_req: AuthReque
 
 router.get('/dynamic-pricing/emergency', authMiddleware, async (_req: AuthRequest, res: Response) => {
   try {
+    const setting = await AppSetting.findOne({ setting_key: 'emergency_percentage' });
+    
     return res.json({
       enabled: true,
-      percentage: 50,
+      percentage: setting ? parseInt(setting.setting_value) : 50,
       applies_to: ['ambulance', 'nursing']
     });
   } catch (error) {
@@ -1754,8 +1786,36 @@ router.get('/dynamic-pricing/emergency', authMiddleware, async (_req: AuthReques
   }
 });
 
-router.put('/dynamic-pricing/emergency', authMiddleware, async (_req: AuthRequest, res: Response) => {
+router.put('/dynamic-pricing/emergency', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const user = await User.findOne({ user_id: req.user!.user_id });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const isSuperAdmin = user.role === 'super_admin' || 
+                        user.email === 'mavytechsolutions@gmail.com' || 
+                        user.patient_email === 'mavytechsolutions@gmail.com';
+    
+    if (!isSuperAdmin) {
+      return res.status(403).json({ error: 'Only super admins can update dynamic pricing' });
+    }
+    
+    const { percentage } = req.body;
+    
+    if (percentage === undefined || percentage < 0 || percentage > 100) {
+      return res.status(400).json({ error: 'Percentage must be between 0 and 100' });
+    }
+    
+    await AppSetting.findOneAndUpdate(
+      { setting_key: 'emergency_percentage' },
+      { 
+        setting_key: 'emergency_percentage',
+        setting_value: percentage.toString()
+      },
+      { upsert: true, new: true }
+    );
+    
     return res.json({ success: true });
   } catch (error) {
     console.error('Update emergency pricing error:', error);

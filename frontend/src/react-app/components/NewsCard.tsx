@@ -44,7 +44,7 @@ export default function NewsCard({
 }: NewsCardProps) {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(news.user_liked);
-  const [likesCount, setLikesCount] = useState(news.likes_count);
+  const [likesCount, setLikesCount] = useState(news.likes_count || 0);
   const [isSaved, setIsSaved] = useState(news.user_saved);
   const [isFollowing, setIsFollowing] = useState(news.user_following_author);
   const [showMenu, setShowMenu] = useState(false);
@@ -61,6 +61,13 @@ export default function NewsCard({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    setIsLiked(news.user_liked);
+    setLikesCount(news.likes_count || 0);
+    setIsSaved(news.user_saved);
+    setIsFollowing(news.user_following_author);
+  }, [news.user_liked, news.likes_count, news.user_saved, news.user_following_author]);
 
   const handleLike = async () => {
     if (!news.id) {
@@ -316,6 +323,7 @@ export default function NewsCard({
           >
             <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
             <span>Like</span>
+            <span>{likesCount}</span>
           </button>
 
           <button

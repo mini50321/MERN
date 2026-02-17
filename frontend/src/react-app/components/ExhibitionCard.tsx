@@ -53,7 +53,7 @@ export default function ExhibitionCard({
 }: ExhibitionCardProps) {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(exhibition.user_liked);
-  const [likesCount, setLikesCount] = useState(exhibition.likes_count);
+  const [likesCount, setLikesCount] = useState(exhibition.likes_count || 0);
   const [isSaved, setIsSaved] = useState(exhibition.user_saved);
   const [userResponse, setUserResponse] = useState(exhibition.user_response);
   const [goingCount, setGoingCount] = useState(exhibition.going_count || 0);
@@ -79,7 +79,7 @@ export default function ExhibitionCard({
 
   useEffect(() => {
     setIsLiked(exhibition.user_liked);
-    setLikesCount(exhibition.likes_count);
+    setLikesCount(exhibition.likes_count || 0);
     setIsSaved(exhibition.user_saved);
     setUserResponse(exhibition.user_response);
     setGoingCount(exhibition.going_count || 0);
@@ -585,6 +585,7 @@ export default function ExhibitionCard({
           >
             <Heart className={`w-5 h-5 ${isLiked ? "fill-current" : ""}`} />
             <span className="font-medium text-sm">Like</span>
+            <span className="font-medium text-sm">{likesCount}</span>
           </button>
 
           <button

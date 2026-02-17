@@ -132,7 +132,17 @@ export default function News() {
         credentials: "include"
       });
       if (response.ok) {
-        await fetchNews();
+        const data = await response.json();
+        setNews(prevNews => prevNews.map(item => {
+          if (String(item.id) === String(id)) {
+            return {
+              ...item,
+              likes_count: data.likes_count ?? (data.liked ? (item.likes_count || 0) + 1 : Math.max(0, (item.likes_count || 0) - 1)),
+              user_liked: data.liked
+            };
+          }
+          return item;
+        }));
       }
     } catch (error) {
       console.error('Error liking news:', error);

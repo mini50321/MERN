@@ -2624,12 +2624,18 @@ app.post("/api/news/:id/like", authMiddleware, async (c) => {
     await c.env.DB.prepare(
       "DELETE FROM news_likes WHERE news_id = ? AND user_id = ?"
     ).bind(newsId, user!.id).run();
-    return c.json({ liked: false });
+    const likesCount = await c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM news_likes WHERE news_id = ?"
+    ).bind(newsId).first();
+    return c.json({ liked: false, likes_count: likesCount?.count || 0 });
   } else {
     await c.env.DB.prepare(
       "INSERT INTO news_likes (news_id, user_id) VALUES (?, ?)"
     ).bind(newsId, user!.id).run();
-    return c.json({ liked: true });
+    const likesCount = await c.env.DB.prepare(
+      "SELECT COUNT(*) as count FROM news_likes WHERE news_id = ?"
+    ).bind(newsId).first();
+    return c.json({ liked: true, likes_count: likesCount?.count || 0 });
   }
 });
 

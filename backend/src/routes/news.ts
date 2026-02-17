@@ -411,23 +411,41 @@ router.post('/upload-image', authMiddleware, upload.single('image'), async (req:
 
 router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const newsId = req.params.id;
+    const newsIdParam = req.params.id;
     const userId = req.user!.user_id;
+    let news;
+    let actualNewsId: string;
     
-    const news = await NewsUpdate.findById(newsId);
+    if (newsIdParam.match(/^[0-9a-fA-F]{24}$/)) {
+      news = await NewsUpdate.findById(newsIdParam);
+      actualNewsId = newsIdParam;
+    } else {
+      const allNews = await NewsUpdate.find().lean();
+      const found = allNews.find(n => {
+        const idNum = parseInt(n._id.toString().slice(-8), 16);
+        return idNum === parseInt(newsIdParam, 10);
+      });
+      if (found) {
+        news = await NewsUpdate.findById(found._id);
+        actualNewsId = found._id.toString();
+      } else {
+        return res.status(404).json({ error: 'News not found' });
+      }
+    }
+    
     if (!news) {
       return res.status(404).json({ error: 'News not found' });
     }
 
-    const existing = await NewsLike.findOne({ news_id: newsId, user_id: userId });
+    const existing = await NewsLike.findOne({ news_id: actualNewsId, user_id: userId });
     
     if (existing) {
-      await NewsLike.deleteOne({ news_id: newsId, user_id: userId });
-      const likesCount = await NewsLike.countDocuments({ news_id: newsId });
+      await NewsLike.deleteOne({ news_id: actualNewsId, user_id: userId });
+      const likesCount = await NewsLike.countDocuments({ news_id: actualNewsId });
       return res.json({ success: true, liked: false, likes_count: likesCount });
     } else {
-      await NewsLike.create({ news_id: newsId, user_id: userId });
-      const likesCount = await NewsLike.countDocuments({ news_id: newsId });
+      await NewsLike.create({ news_id: actualNewsId, user_id: userId });
+      const likesCount = await NewsLike.countDocuments({ news_id: actualNewsId });
       return res.json({ success: true, liked: true, likes_count: likesCount });
     }
   } catch (error) {

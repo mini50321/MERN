@@ -127,10 +127,13 @@ export default function News() {
       return;
     }
     try {
-      await fetch(`/api/news/${id}/like`, { 
+      const response = await fetch(`/api/news/${id}/like`, { 
         method: "POST",
         credentials: "include"
       });
+      if (response.ok) {
+        await fetchNews();
+      }
     } catch (error) {
       console.error('Error liking news:', error);
     }

@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import multer from 'multer';
-import { NewsUpdate, NewsComment, User } from '../models/index.js';
+import { NewsUpdate, NewsComment, User, NewsLike } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -30,10 +30,39 @@ router.get('/', async (req: Request, res: Response) => {
       .sort({ created_at: -1 })
       .lean();
     
-    const formatted = news.map(item => ({
-      ...item,
-      id: item._id.toString(),
-      posted_by_user_id: item.posted_by_user_id
+    const jwt = await import('jsonwebtoken');
+    let currentUserId: string | null = null;
+    try {
+      const token = (req.headers.authorization?.replace('Bearer ', '') || 
+                    (req as any).cookies?.mavy_session);
+      if (token) {
+        const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+        const decoded = jwt.verify(token, jwtSecret) as { user_id: string };
+        currentUserId = decoded.user_id;
+      }
+    } catch {
+      currentUserId = null;
+    }
+    
+    const formatted = await Promise.all(news.map(async (item) => {
+      const newsId = item._id.toString();
+      const likesCount = await NewsLike.countDocuments({ news_id: newsId });
+      let userLiked = false;
+      let userSaved = false;
+      
+      if (currentUserId) {
+        const likeCheck = await NewsLike.findOne({ news_id: newsId, user_id: currentUserId });
+        userLiked = !!likeCheck;
+      }
+      
+      return {
+        ...item,
+        id: newsId,
+        posted_by_user_id: item.posted_by_user_id,
+        likes_count: likesCount,
+        user_liked: userLiked,
+        user_saved: userSaved
+      };
     }));
     
     return res.json(formatted);
@@ -46,15 +75,23 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/my-posts', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const news = await NewsUpdate.find({ posted_by_user_id: req.user!.user_id })
-      .sort({ created_at: -1 });
+      .sort({ created_at: -1 })
+      .lean();
 
-    const formatted = news.map(item => {
-      const obj = item.toObject() as any;
+    const formatted = await Promise.all(news.map(async (item) => {
+      const newsId = item._id.toString();
+      const likesCount = await NewsLike.countDocuments({ news_id: newsId });
+      const likeCheck = await NewsLike.findOne({ news_id: newsId, user_id: req.user!.user_id });
+      const userLiked = !!likeCheck;
+      
       return {
-        ...obj,
-        id: item._id.toString()
+        ...item,
+        id: newsId,
+        likes_count: likesCount,
+        user_liked: userLiked,
+        user_saved: false
       };
-    });
+    }));
 
     return res.json(formatted);
   } catch (error) {
@@ -202,9 +239,36 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'News not found' });
     }
 
+    const jwt = await import('jsonwebtoken');
+    let currentUserId: string | null = null;
+    try {
+      const token = (req.headers.authorization?.replace('Bearer ', '') || 
+                    (req as any).cookies?.mavy_session);
+      if (token) {
+        const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+        const decoded = jwt.verify(token, jwtSecret) as { user_id: string };
+        currentUserId = decoded.user_id;
+      }
+    } catch {
+      currentUserId = null;
+    }
+
+    const newsId = news._id.toString();
+    const likesCount = await NewsLike.countDocuments({ news_id: newsId });
+    let userLiked = false;
+    let userSaved = false;
+    
+    if (currentUserId) {
+      const likeCheck = await NewsLike.findOne({ news_id: newsId, user_id: currentUserId });
+      userLiked = !!likeCheck;
+    }
+
     return res.json({
       ...news,
-      id: news._id.toString()
+      id: newsId,
+      likes_count: likesCount,
+      user_liked: userLiked,
+      user_saved: userSaved
     });
   } catch (error) {
     console.error('Get news error:', error);
@@ -347,13 +411,25 @@ router.post('/upload-image', authMiddleware, upload.single('image'), async (req:
 
 router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const news = await NewsUpdate.findById(req.params.id);
+    const newsId = req.params.id;
+    const userId = req.user!.user_id;
     
+    const news = await NewsUpdate.findById(newsId);
     if (!news) {
       return res.status(404).json({ error: 'News not found' });
     }
 
-    return res.json({ success: true, liked: true });
+    const existing = await NewsLike.findOne({ news_id: newsId, user_id: userId });
+    
+    if (existing) {
+      await NewsLike.deleteOne({ news_id: newsId, user_id: userId });
+      const likesCount = await NewsLike.countDocuments({ news_id: newsId });
+      return res.json({ success: true, liked: false, likes_count: likesCount });
+    } else {
+      await NewsLike.create({ news_id: newsId, user_id: userId });
+      const likesCount = await NewsLike.countDocuments({ news_id: newsId });
+      return res.json({ success: true, liked: true, likes_count: likesCount });
+    }
   } catch (error) {
     console.error('Like news error:', error);
     return res.status(500).json({ error: 'Failed to like news' });

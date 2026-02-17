@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import multer from 'multer';
-import { Exhibition, ExhibitionComment, ExhibitionCommentReply, ExhibitionResponse, User } from '../models/index.js';
+import { Exhibition, ExhibitionComment, ExhibitionCommentReply, ExhibitionResponse, ExhibitionLike, User } from '../models/index.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -63,6 +63,15 @@ router.get('/', async (req: Request, res: Response) => {
         response_type: 'not_going'
       });
       
+      const likesCount = await ExhibitionLike.countDocuments({ exhibition_id: exhibitionId });
+      let userLiked = false;
+      let userSaved = false;
+      
+      if (currentUserId) {
+        const likeCheck = await ExhibitionLike.findOne({ exhibition_id: exhibitionId, user_id: currentUserId });
+        userLiked = !!likeCheck;
+      }
+      
       let userResponse: 'going' | 'not_going' | null = null;
       if (currentUserId) {
         const userResponseDoc = await ExhibitionResponse.findOne({
@@ -79,7 +88,10 @@ router.get('/', async (req: Request, res: Response) => {
         id: numericId,
         going_count: goingCount,
         not_going_count: notGoingCount,
-        user_response: userResponse
+        user_response: userResponse,
+        likes_count: likesCount,
+        user_liked: userLiked,
+        user_saved: userSaved
       };
     }));
     
@@ -296,26 +308,43 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) =>
 
 router.post('/:id/like', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const exhibitionId = req.params.id;
+    const exhibitionIdParam = req.params.id;
+    const userId = req.user!.user_id;
     let exhibition;
+    let actualExhibitionId: string;
     
-    if (exhibitionId.match(/^[0-9a-fA-F]{24}$/)) {
-      exhibition = await Exhibition.findById(exhibitionId);
+    if (exhibitionIdParam.match(/^[0-9a-fA-F]{24}$/)) {
+      exhibition = await Exhibition.findById(exhibitionIdParam);
+      actualExhibitionId = exhibitionIdParam;
     } else {
       const allExhibitions = await Exhibition.find().lean();
       const found = allExhibitions.find(e => {
         const idNum = parseInt(e._id.toString().slice(-8), 16);
-        return idNum === parseInt(exhibitionId, 10);
+        return idNum === parseInt(exhibitionIdParam, 10);
       });
       if (found) {
         exhibition = await Exhibition.findById(found._id);
+        actualExhibitionId = found._id.toString();
+      } else {
+        return res.status(404).json({ error: 'Exhibition not found' });
       }
     }
     
     if (!exhibition) {
       return res.status(404).json({ error: 'Exhibition not found' });
     }
-    return res.json({ success: true, message: 'Like status updated' });
+
+    const existing = await ExhibitionLike.findOne({ exhibition_id: actualExhibitionId, user_id: userId });
+    
+    if (existing) {
+      await ExhibitionLike.deleteOne({ exhibition_id: actualExhibitionId, user_id: userId });
+      const likesCount = await ExhibitionLike.countDocuments({ exhibition_id: actualExhibitionId });
+      return res.json({ success: true, liked: false, likes_count: likesCount });
+    } else {
+      await ExhibitionLike.create({ exhibition_id: actualExhibitionId, user_id: userId });
+      const likesCount = await ExhibitionLike.countDocuments({ exhibition_id: actualExhibitionId });
+      return res.json({ success: true, liked: true, likes_count: likesCount });
+    }
   } catch (error) {
     console.error('Like exhibition error:', error);
     return res.status(500).json({ error: 'Failed to like exhibition' });

@@ -70,3 +70,7 @@ export { AdminPermission } from './AdminPermission.js';
 export type { IAdminPermission } from './AdminPermission.js';
 export { Report } from './Report.js';
 export type { IReport } from './Report.js';
+export { NewsLike } from './NewsLike.js';
+export type { INewsLike } from './NewsLike.js';
+export { ExhibitionLike } from './ExhibitionLike.js';
+export type { IExhibitionLike } from './ExhibitionLike.js';

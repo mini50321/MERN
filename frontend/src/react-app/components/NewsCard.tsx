@@ -43,10 +43,10 @@ export default function NewsCard({
   showEditDelete = false
 }: NewsCardProps) {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(news.user_liked);
+  const [isLiked, setIsLiked] = useState(news.user_liked || false);
   const [likesCount, setLikesCount] = useState(news.likes_count || 0);
-  const [isSaved, setIsSaved] = useState(news.user_saved);
-  const [isFollowing, setIsFollowing] = useState(news.user_following_author);
+  const [isSaved, setIsSaved] = useState(news.user_saved || false);
+  const [isFollowing, setIsFollowing] = useState(news.user_following_author || false);
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -63,11 +63,16 @@ export default function NewsCard({
   }, []);
 
   useEffect(() => {
-    setIsLiked(news.user_liked);
-    setLikesCount(news.likes_count || 0);
-    setIsSaved(news.user_saved);
-    setIsFollowing(news.user_following_author);
-  }, [news.user_liked, news.likes_count, news.user_saved, news.user_following_author]);
+    const liked = Boolean(news.user_liked);
+    const count = Number(news.likes_count) || 0;
+    const saved = Boolean(news.user_saved);
+    const following = Boolean(news.user_following_author);
+    
+    setIsLiked(liked);
+    setLikesCount(count);
+    setIsSaved(saved);
+    setIsFollowing(following);
+  }, [news.user_liked, news.likes_count, news.user_saved, news.user_following_author, news.id]);
 
   const handleLike = async () => {
     if (!news.id) {

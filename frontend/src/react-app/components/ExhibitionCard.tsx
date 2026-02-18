@@ -52,7 +52,7 @@ export default function ExhibitionCard({
   showEditDelete = false
 }: ExhibitionCardProps) {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(exhibition.user_liked);
+  const [isLiked, setIsLiked] = useState(exhibition.user_liked || false);
   const [likesCount, setLikesCount] = useState(exhibition.likes_count || 0);
   const [isSaved, setIsSaved] = useState(exhibition.user_saved);
   const [userResponse, setUserResponse] = useState(exhibition.user_response);
@@ -78,13 +78,17 @@ export default function ExhibitionCard({
   }, []);
 
   useEffect(() => {
-    setIsLiked(exhibition.user_liked);
-    setLikesCount(exhibition.likes_count || 0);
-    setIsSaved(exhibition.user_saved);
+    const liked = Boolean(exhibition.user_liked);
+    const count = Number(exhibition.likes_count) || 0;
+    const saved = Boolean(exhibition.user_saved);
+    
+    setIsLiked(liked);
+    setLikesCount(count);
+    setIsSaved(saved);
     setUserResponse(exhibition.user_response);
     setGoingCount(exhibition.going_count || 0);
     setNotGoingCount(exhibition.not_going_count || 0);
-  }, [exhibition.user_liked, exhibition.likes_count, exhibition.user_saved, exhibition.user_response, exhibition.going_count, exhibition.not_going_count]);
+  }, [exhibition.user_liked, exhibition.likes_count, exhibition.user_saved, exhibition.user_response, exhibition.going_count, exhibition.not_going_count, exhibition.id]);
 
   useEffect(() => {
     if (!viewTracked && cardRef.current) {

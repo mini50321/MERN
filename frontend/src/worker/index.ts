@@ -2289,21 +2289,22 @@ app.get("/api/news", async (c) => {
 
   const newsWithCounts = await Promise.all(
     results.map(async (news: any) => {
+      const newsIdStr = String(news.id);
       const likesCount = await c.env.DB.prepare(
         "SELECT COUNT(*) as count FROM news_likes WHERE news_id = ?"
-      ).bind(news.id).first();
+      ).bind(newsIdStr).first();
 
       const commentsCount = await c.env.DB.prepare(
         "SELECT COUNT(*) as count FROM news_comments WHERE news_id = ?"
-      ).bind(news.id).first();
+      ).bind(newsIdStr).first();
 
       const sharesCount = await c.env.DB.prepare(
         "SELECT COUNT(*) as count FROM news_shares WHERE news_id = ?"
-      ).bind(news.id).first();
+      ).bind(newsIdStr).first();
 
       const repostsCount = await c.env.DB.prepare(
         "SELECT COUNT(*) as count FROM news_reposts WHERE news_id = ?"
-      ).bind(news.id).first();
+      ).bind(newsIdStr).first();
 
       let userLiked = false;
       let userSaved = false;
@@ -2313,17 +2314,17 @@ app.get("/api/news", async (c) => {
       if (user) {
         const likeCheck = await c.env.DB.prepare(
           "SELECT id FROM news_likes WHERE news_id = ? AND user_id = ?"
-        ).bind(news.id, user.id).first();
+        ).bind(newsIdStr, user.id).first();
         userLiked = !!likeCheck;
 
         const saveCheck = await c.env.DB.prepare(
           "SELECT id FROM saved_posts WHERE news_id = ? AND user_id = ?"
-        ).bind(news.id, user.id).first();
+        ).bind(newsIdStr, user.id).first();
         userSaved = !!saveCheck;
 
         const repostCheck = await c.env.DB.prepare(
           "SELECT id FROM news_reposts WHERE news_id = ? AND user_id = ?"
-        ).bind(news.id, user.id).first();
+        ).bind(newsIdStr, user.id).first();
         userReposted = !!repostCheck;
 
         if (news.posted_by_user_id && news.posted_by_user_id !== user.id) {

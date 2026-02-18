@@ -172,9 +172,6 @@ export default function ExhibitionCard({
   };
 
   const handleLike = async () => {
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
     onLike(exhibition.id);
   };
 
@@ -561,12 +558,6 @@ export default function ExhibitionCard({
             <span className="flex items-center gap-1">
               <Eye className="w-4 h-4" />
               {exhibition.views_count} {exhibition.views_count === 1 ? 'view' : 'views'}
-            </span>
-          )}
-          {likesCount > 0 && (
-            <span className="flex items-center gap-1">
-              <Heart className="w-4 h-4 text-red-500 fill-current" />
-              {likesCount}
             </span>
           )}
           {exhibition.comments_count > 0 && (

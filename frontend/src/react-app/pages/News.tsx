@@ -138,7 +138,7 @@ export default function News() {
             return {
               ...item,
               likes_count: data.likes_count ?? (data.liked ? (item.likes_count || 0) + 1 : Math.max(0, (item.likes_count || 0) - 1)),
-              user_liked: data.liked
+              user_liked: data.liked !== undefined ? data.liked : !item.user_liked
             };
           }
           return item;

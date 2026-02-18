@@ -74,9 +74,6 @@ export default function NewsCard({
       console.error('News item missing ID:', news);
       return;
     }
-    const newLikedState = !isLiked;
-    setIsLiked(newLikedState);
-    setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
     onLike(news.id);
   };
 
@@ -301,12 +298,6 @@ export default function NewsCard({
         )}
 
         <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
-          {likesCount > 0 && (
-            <span className="flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5 text-red-500 fill-current" />
-              {likesCount}
-            </span>
-          )}
           {news.comments_count > 0 && (
             <span>{news.comments_count} {news.comments_count === 1 ? 'comment' : 'comments'}</span>
           )}

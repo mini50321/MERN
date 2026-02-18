@@ -106,7 +106,17 @@ export default function Exhibitions() {
       });
       
       if (response.ok) {
-        fetchExhibitions();
+        const data = await response.json();
+        setExhibitions(prevExhibitions => prevExhibitions.map(item => {
+          if (String(item.id) === String(exhibitionId)) {
+            return {
+              ...item,
+              likes_count: data.likes_count ?? (data.liked ? (item.likes_count || 0) + 1 : Math.max(0, (item.likes_count || 0) - 1)),
+              user_liked: data.liked !== undefined ? data.liked : !item.user_liked
+            };
+          }
+          return item;
+        }));
       } else {
         alert("Failed to like exhibition. Please try again.");
       }
